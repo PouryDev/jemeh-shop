@@ -7,6 +7,10 @@ RUN set -eux; \
     && docker-php-ext-install -j$(nproc) pdo pdo_mysql intl mbstring zip gd bcmath \
     && apk del --no-network freetype-dev libjpeg-turbo-dev libpng-dev
 
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
 WORKDIR /var/www/html
 
 # Copy project (we will bind-mount in compose, but keep a copy for image-only runs)

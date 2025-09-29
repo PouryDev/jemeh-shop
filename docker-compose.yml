@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   php:
     build:
@@ -47,7 +45,6 @@ services:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
     command:
       [
-        "mysqld",
         "--character-set-server=utf8mb4",
         "--collation-server=utf8mb4_unicode_ci",
       ]
