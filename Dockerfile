@@ -5,7 +5,8 @@ RUN set -eux; \
     apk add --no-cache bash icu-dev oniguruma-dev libzip-dev libpng-dev freetype-dev libjpeg-turbo-dev curl git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) pdo pdo_mysql intl mbstring zip gd bcmath \
-    && apk del --no-network freetype-dev libjpeg-turbo-dev libpng-dev
+    && apk add --no-cache libpng freetype libjpeg-turbo icu-libs oniguruma libzip \
+    && apk del --no-network freetype-dev libjpeg-turbo-dev libpng-dev icu-dev oniguruma-dev libzip-dev
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
