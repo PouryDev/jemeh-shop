@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jemeh-shop-php:prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-jemeh_shop_db}
+      DB_USERNAME: ${DB_USERNAME:-jemeh}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      SESSION_DRIVER: file
+      CACHE_DRIVER: file
+    volumes:
+      - ./:/var/www/html:rw
+      - storage_data:/var/www/html/storage
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - storage_data:/var/www/html/storage
+    depends_on:
+      - php
+
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:-jemeh_shop_db}
+      MARIADB_USER: ${DB_USERNAME:-jemeh}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-secret}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
+    command:
+      [
+        "mysqld",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+      ]
+    volumes:
+      - db_data:/var/lib/mysql
+
+  backup:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_DATABASE: ${DB_DATABASE:-jemeh_shop_db}
+      DB_USERNAME: ${DB_USERNAME:-jemeh}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - ./docker/backup/backup.sh:/backup.sh:ro
+      - db_backups:/backups
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "crond -f -l 8 & echo '0 3 * * * /backup.sh' > /etc/crontabs/root && tail -f /dev/null",
+      ]
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+  storage_data:
+  db_backups:

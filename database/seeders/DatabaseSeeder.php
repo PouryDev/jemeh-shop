@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Product;
+use App\Models\ProductImage;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -13,11 +15,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Create or update default admin and sample user
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            ['name' => 'Admin', 'password' => bcrypt('password'), 'is_admin' => true]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'test@example.com'],
+            ['name' => 'Test User', 'password' => bcrypt('password')]
+        );
+
+        // Seed many products with sample images
+        Product::factory(40)->create()->each(function (Product $product) {
+            // attach 1-3 placeholder images
+            $count = rand(1, 3);
+            for ($i = 0; $i < $count; $i++) {
+                $placeholder = 'https://picsum.photos/seed/'.md5($product->id.'-'.$i).'/600/600';
+                // store as external url in path for demo, or keep empty for now
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'path' => $placeholder,
+                    'sort_order' => $i,
+                ]);
+            }
+        });
     }
 }
