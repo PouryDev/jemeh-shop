@@ -5,8 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ?? 'جمه‌شاپ' }}</title>
         @vite(['resources/css/app.css','resources/js/app.js'])
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=Vazirmatn:300,400,600,800" rel="stylesheet" />
+        
         <style>
             body { font-family: Vazirmatn, var(--font-sans); }
             .cute { background: linear-gradient(135deg,#ff8bd3,#ffd1e8); }

@@ -10,8 +10,7 @@
         @else
             <script src="https://cdn.tailwindcss.com"></script>
         @endif
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=Vazirmatn:300,400,600,800" rel="stylesheet" />
+        
         <style>
             body { font-family: Vazirmatn, var(--font-sans); }
             .brand-grad { background: linear-gradient(135deg,#111827,#1f2937); }
