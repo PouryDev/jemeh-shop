@@ -8,6 +8,10 @@ RUN set -eux; \
     && apk add --no-cache libpng freetype libjpeg-turbo icu-libs oniguruma libzip \
     && apk del --no-network freetype-dev libjpeg-turbo-dev libpng-dev icu-dev oniguruma-dev libzip-dev
 
+# Install Node.js and npm for building frontend assets
+RUN set -eux; \
+    apk add --no-cache nodejs npm
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1

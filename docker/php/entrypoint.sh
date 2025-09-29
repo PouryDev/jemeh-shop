@@ -14,6 +14,17 @@ if [ ! -d "vendor" ]; then
   fi
 fi
 
+# Build frontend assets if missing
+if [ -f "package.json" ]; then
+  if [ ! -d "node_modules" ]; then
+    npm ci --no-audit --no-fund --quiet || npm install --no-audit --no-fund --quiet || true
+  fi
+  # If using Laravel Vite plugin, built assets go to public/build
+  if [ ! -d "public/build" ]; then
+    npm run build || true
+  fi
+fi
+
 # App key
 if [ ! -f ".env" ]; then
   cp .env.example .env || true
