@@ -5,10 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ $title ?? 'جمه‌شاپ' }}</title>
-        @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @if (file_exists(public_path('build/manifest.json')) || (app()->environment('local') && file_exists(public_path('hot'))))
             @vite(['resources/css/app.css','resources/js/app.js'])
-        @else
-            <script src="https://cdn.tailwindcss.com"></script>
         @endif
         
         <style>
