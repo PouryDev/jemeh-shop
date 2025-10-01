@@ -50,13 +50,4 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * Get the name of the unique identifier for the user (for authentication).
-     *
-     * @return string
-     */
-    public function getAuthIdentifierName()
-    {
-        return 'phone'; // Use phone instead of email for authentication
-    }
 }

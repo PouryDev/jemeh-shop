@@ -16,12 +16,17 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
+        $request->validate([
             'phone' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        // Find user by phone
+        $user = User::where('phone', $request->phone)->first();
+
+        // Check if user exists and password is correct
+        if ($user && Hash::check($request->password, $user->password)) {
+            Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
             return redirect()->intended('/');
         }
