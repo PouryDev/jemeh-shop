@@ -34,9 +34,33 @@
             
             <form method="post" action="{{ route('checkout.place') }}" enctype="multipart/form-data" class="space-y-3">
                 @csrf
-                <x-ui.input name="customer_name" :value="old('customer_name')" label="نام و نام خانوادگی" placeholder="" required />
-                <x-ui.input name="customer_phone" :value="old('customer_phone')" label="شماره تماس" placeholder="" required />
-                <x-ui.textarea name="customer_address" label="آدرس کامل" rows="4" required>{{ old('customer_address') }}</x-ui.textarea>
+                <x-ui.input 
+                    name="customer_name" 
+                    :value="old('customer_name', auth()->user()?->name)" 
+                    label="نام و نام خانوادگی" 
+                    placeholder="" 
+                    required 
+                />
+                <x-ui.input 
+                    name="customer_phone" 
+                    :value="old('customer_phone', auth()->user()?->phone)" 
+                    label="شماره تماس" 
+                    placeholder="09123456789" 
+                    required 
+                />
+                <x-ui.textarea 
+                    name="customer_address" 
+                    label="آدرس کامل" 
+                    rows="4" 
+                    required
+                >{{ old('customer_address', auth()->user()?->address) }}</x-ui.textarea>
+                
+                @auth
+                    <div class="text-xs text-gray-400 bg-white/5 p-2 rounded border border-white/10">
+                        💡 اطلاعات شما از حساب کاربری پر شده است. در صورت نیاز می‌توانید ویرایش کنید.
+                    </div>
+                @endauth
+                
                 <x-ui.file name="receipt" label="آپلود فیش واریزی (اختیاری)" accept="image/*" />
                 <x-ui.button type="submit">ثبت سفارش</x-ui.button>
             </form>

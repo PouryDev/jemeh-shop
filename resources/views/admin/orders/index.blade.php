@@ -13,7 +13,8 @@
         </div>
     </form>
     <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
-        <div class="overflow-x-auto">
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-[720px] w-full text-sm">
             <thead>
                 <tr class="bg-white/5/50">
@@ -60,6 +61,51 @@
                 @endforelse
             </tbody>
             </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="md:hidden p-4 space-y-3">
+            @forelse($orders as $order)
+                @php $statusColors = [
+                    'pending' => ['text' => 'text-amber-300', 'bg' => 'bg-amber-500/10', 'bd' => 'border-amber-500/20', 'label' => 'در انتظار'],
+                    'confirmed' => ['text' => 'text-emerald-300', 'bg' => 'bg-emerald-500/10', 'bd' => 'border-emerald-500/20', 'label' => 'تایید شده'],
+                    'cancelled' => ['text' => 'text-rose-300', 'bg' => 'bg-rose-500/10', 'bd' => 'border-rose-500/20', 'label' => 'لغو شده'],
+                    'shipped' => ['text' => 'text-sky-300', 'bg' => 'bg-sky-500/10', 'bd' => 'border-sky-500/20', 'label' => 'ارسال شده'],
+                ]; $c = $statusColors[$order->status] ?? $statusColors['pending']; @endphp
+                
+                <div class="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="font-semibold text-white">#{{ $order->id }}</div>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border {{ $c['bg'] }} {{ $c['bd'] }} {{ $c['text'] }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ str_replace('text','bg',$c['text']) }}"></span>
+                            {{ $c['label'] }}
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <div class="text-xs text-gray-400 mb-1">مشتری</div>
+                        <div class="text-sm font-medium">{{ $order->customer_name }}</div>
+                        <div class="text-xs text-gray-400">{{ $order->customer_phone }}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">مبلغ</div>
+                            <div class="text-white font-semibold">{{ number_format($order->total_amount) }} <span class="text-xs text-gray-400">تومان</span></div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400 mb-1">تاریخ</div>
+                            <div class="text-white">{{ $order->created_at->format('Y/m/d') }}</div>
+                        </div>
+                    </div>
+                    
+                    <a href="{{ route('admin.orders.show',$order) }}" class="block text-center bg-cherry-600 hover:bg-cherry-700 text-white px-4 py-2 rounded transition text-sm">
+                        مشاهده جزئیات
+                    </a>
+                </div>
+            @empty
+                <div class="text-center text-gray-300 py-8">سفارشی یافت نشد.</div>
+            @endforelse
         </div>
     </div>
     <div class="mt-4">{{ $orders->links() }}</div>
