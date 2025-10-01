@@ -57,8 +57,8 @@
                             <button class="text-gray-200 hover:text-white">خروج</button>
                         </form>
                     @else
-                        <a href="{{ route('auth.login.show') }}" class="hover:text-white">ورود</a>
-                        <a href="{{ route('auth.register.show') }}" class="bg-pink-600 hover:bg-pink-700 text-white rounded px-3 py-1">ثبت‌نام</a>
+                        <a href="{{ route('login') }}" class="hover:text-white">ورود</a>
+                        <a href="{{ route('register') }}" class="bg-pink-600 hover:bg-pink-700 text-white rounded px-3 py-1">ثبت‌نام</a>
                     @endauth
                 </nav>
 
@@ -108,8 +108,8 @@
                             <button class="w-full text-left rounded hover:bg-white/5">خروج</button>
                         </form>
                     @else
-                        <a href="{{ route('auth.login.show') }}" class="block px-3 py-2 rounded hover:bg-white/5">ورود</a>
-                        <a href="{{ route('auth.register.show') }}" class="block px-3 py-2 rounded bg-pink-600/10 text-white hover:bg-pink-600/20">ثبت‌نام</a>
+                        <a href="{{ route('login') }}" class="block px-3 py-2 rounded hover:bg-white/5">ورود</a>
+                        <a href="{{ route('register') }}" class="block px-3 py-2 rounded bg-pink-600/10 text-white hover:bg-pink-600/20">ثبت‌نام</a>
                     @endauth
                 </div>
             </nav>
