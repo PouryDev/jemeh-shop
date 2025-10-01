@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ $title ?? 'جمه‌شاپ' }}</title>
+        <link rel="icon" type="image/png" href="{{ asset('favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
         @if (file_exists(public_path('build/manifest.json')) || (app()->environment('local') && file_exists(public_path('hot'))))
             @vite(['resources/css/app.css','resources/js/app.js'])
         @endif
@@ -29,8 +31,11 @@
     <body class="min-h-screen bg-[#0b0b0f] text-white">
         <header class="sticky top-0 z-40 brand-grad/90 shadow">
             <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between relative">
-                <a href="/" class="text-xl font-extrabold tracking-tight">
-                    <span class="brand-text">Jemeh</span><span class="text-white">Shop</span>
+                <a href="/" class="flex items-center gap-2">
+                    <img src="{{ asset('images/logo.png') }}" alt="JemehShop" class="h-10 w-auto">
+                    <span class="text-xl font-extrabold tracking-tight">
+                        <span class="brand-text">Jemeh</span><span class="text-white">Shop</span>
+                    </span>
                 </a>
                 <nav class="hidden md:flex items-center gap-6 text-sm text-gray-200">
                     <a href="/" class="hover:text-white transition">خانه</a>
@@ -86,8 +91,11 @@
         <!-- Mobile sidebar (separate from header) -->
         <div id="mobileMenu" class="md:hidden hidden fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] h-[100dvh] overflow-y-auto border-r border-white/10 bg-[#0d0d14]/95 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-out will-change-transform">
             <div class="flex items-center justify-between h-14 px-4 border-b border-white/10">
-                <a href="/" class="text-lg font-extrabold tracking-tight">
-                    <span class="brand-text">Jemeh</span><span class="text-white">Shop</span>
+                <a href="/" class="flex items-center gap-2">
+                    <img src="{{ asset('images/logo.png') }}" alt="JemehShop" class="h-8 w-auto">
+                    <span class="text-lg font-extrabold tracking-tight">
+                        <span class="brand-text">Jemeh</span><span class="text-white">Shop</span>
+                    </span>
                 </a>
                 <button id="mobileCloseBtn" class="inline-flex items-center justify-center w-9 h-9 rounded border border-white/15 text-white/90 hover:text-white hover:border-white/30" aria-label="Close">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
