@@ -29,7 +29,7 @@
             <x-ui.input type="number" name="price" :value="old('price',$product->price)" label="قیمت (تومان)" required />
             <x-ui.input type="number" name="stock" :value="old('stock',$product->stock)" label="موجودی" required />
         </div>
-        <x-ui.checkbox name="is_active" label="فعال" :checked="$product->is_active" />
+        <x-ui.checkbox name="is_active" value="1" label="فعال" :checked="$product->is_active" />
         <x-ui.file name="images[]" label="افزودن تصاویر جدید" :multiple="true" accept="image/*" />
         <div class="flex gap-2 flex-wrap">
             @foreach($product->images as $img)

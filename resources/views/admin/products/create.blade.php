@@ -28,7 +28,7 @@
             <x-ui.input type="number" name="price" :value="old('price')" label="قیمت (تومان)" placeholder="" required />
             <x-ui.input type="number" name="stock" :value="old('stock')" label="موجودی" placeholder="" required />
         </div>
-        <x-ui.checkbox name="is_active" label="فعال" :checked="old('is_active', true)" />
+        <x-ui.checkbox name="is_active" value="1" label="فعال" :checked="old('is_active', true)" />
         <x-ui.file name="images[]" label="تصاویر محصول" :multiple="true" accept="image/*" />
         @error('images')
             <div class="text-xs text-rose-400">{{ $message }}</div>
