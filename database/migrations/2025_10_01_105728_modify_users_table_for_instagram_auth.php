@@ -18,7 +18,7 @@ return new class extends Migration
         });
 
         // Step 2: Fill instagram_id and phone with default values for existing users
-        DB::table('users')->whereNull('instagram_id')->update([
+        DB::table(table: 'users')->whereNull('instagram_id')->update([
             'instagram_id' => DB::raw("CONCAT('@user_', id)"),
         ]);
 

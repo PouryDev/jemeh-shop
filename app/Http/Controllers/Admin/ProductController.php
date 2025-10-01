@@ -13,7 +13,12 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::latest()->paginate(20);
-        return view('admin.products.index', compact('products'));
+        
+        // Debug info
+        $totalProducts = Product::count();
+        $activeProducts = Product::where('is_active', true)->count();
+        
+        return view('admin.products.index', compact('products', 'totalProducts', 'activeProducts'));
     }
 
     public function create()

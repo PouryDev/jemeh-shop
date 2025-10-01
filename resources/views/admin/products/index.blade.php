@@ -1,7 +1,16 @@
 <x-admin.layout :title="'مدیریت محصولات'">
     <div class="flex items-center justify-between mb-4">
-        <h1 class="text-xl font-bold">محصولات</h1>
-        <a href="{{ route('admin.products.create') }}" class="bg-cherry-500 text-white rounded px-3 py-1">محصول جدید</a>
+        <div>
+            <h1 class="text-xl font-bold">محصولات</h1>
+            <div class="text-xs text-gray-400 mt-1">
+                کل: {{ $totalProducts ?? $products->total() }} محصول
+                @if(isset($activeProducts))
+                    | فعال: {{ $activeProducts }}
+                    | غیرفعال: {{ ($totalProducts ?? 0) - $activeProducts }}
+                @endif
+            </div>
+        </div>
+        <a href="{{ route('admin.products.create') }}" class="bg-cherry-600 hover:bg-cherry-700 text-white rounded px-3 py-2 transition">+ محصول جدید</a>
     </div>
     <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
         <!-- Desktop Table View -->
@@ -17,7 +26,7 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-white/10">
-                @foreach($products as $product)
+                @forelse($products as $product)
                     <tr class="hover:bg-white/5 transition">
                         <td class="p-3">
                             <div class="flex items-center gap-3">
@@ -58,14 +67,23 @@
                             </a>
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="5" class="p-8 text-center">
+                            <div class="text-gray-400 mb-2">هیچ محصولی وجود ندارد</div>
+                            <a href="{{ route('admin.products.create') }}" class="inline-block bg-cherry-600 hover:bg-cherry-700 text-white px-4 py-2 rounded text-sm">
+                                افزودن اولین محصول
+                            </a>
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
             </table>
         </div>
 
         <!-- Mobile Card View -->
         <div class="md:hidden p-4 space-y-3">
-            @foreach($products as $product)
+            @forelse($products as $product)
                 <div class="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
                     <div class="flex items-start gap-3">
                         <div class="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-2xl flex-shrink-0">🛍️</div>
@@ -108,10 +126,20 @@
                         ویرایش محصول
                     </a>
                 </div>
-            @endforeach
+            @empty
+                <div class="text-center py-8">
+                    <div class="text-gray-400 mb-3">هیچ محصولی وجود ندارد</div>
+                    <a href="{{ route('admin.products.create') }}" class="inline-block bg-cherry-600 hover:bg-cherry-700 text-white px-4 py-2 rounded text-sm">
+                        افزودن اولین محصول
+                    </a>
+                </div>
+            @endforelse
         </div>
     </div>
-    <div class="mt-4">{{ $products->links() }}</div>
+    
+    @if($products->hasPages())
+        <div class="mt-4">{{ $products->links() }}</div>
+    @endif
 </x-admin.layout>
 
 
