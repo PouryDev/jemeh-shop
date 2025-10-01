@@ -12,7 +12,7 @@
                 @enderror
                 <x-ui.button type="submit" class="w-full">ورود</x-ui.button>
             </form>
-            <div class="text-xs text-gray-300 mt-3">حساب ندارید؟ <a class="text-pink-400" href="{{ route('register') }}">ثبت‌نام</a></div>
+            <div class="text-xs text-gray-300 mt-3">حساب ندارید؟ <a class="text-cherry-400" href="{{ route('register') }}">ثبت‌نام</a></div>
         </div>
     </div>
 </x-layouts.app>

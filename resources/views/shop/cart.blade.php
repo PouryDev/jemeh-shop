@@ -12,7 +12,7 @@
                         <div class="w-14 h-14 rounded bg-white/10 flex items-center justify-center">🛍️</div>
                         <div>
                             <div class="font-bold">{{ $p?->title }}</div>
-                            <div class="text-xs text-pink-400">{{ number_format($p?->price ?? 0) }} تومان × {{ $qty }}</div>
+                            <div class="text-xs text-cherry-400">{{ number_format($p?->price ?? 0) }} تومان × {{ $qty }}</div>
                         </div>
                     </div>
                     <form method="post" action="{{ route('cart.remove',$id) }}">
@@ -21,10 +21,10 @@
                     </form>
                 </div>
             @endforeach
-            <div class="text-right mt-3 font-extrabold text-pink-400">جمع: {{ number_format($total) }} تومان</div>
+            <div class="text-right mt-3 font-extrabold text-cherry-400">جمع: {{ number_format($total) }} تومان</div>
         </x-ui.card>
         <div class="mt-4 text-left">
-            <a href="{{ route('checkout.index') }}" class="bg-pink-500 hover:bg-pink-600 text-white rounded px-4 py-2">ادامه خرید</a>
+            <a href="{{ route('checkout.index') }}" class="bg-cherry-500 hover:bg-cherry-600 text-white rounded px-4 py-2">ادامه خرید</a>
         </div>
     @endif
 </x-dynamic-component>

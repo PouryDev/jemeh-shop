@@ -10,7 +10,7 @@
                 @if(session('status'))
                     <div class="text-sm text-green-400">{{ session('status') }}</div>
                 @endif
-                <button class="bg-pink-600 hover:bg-pink-700 text-white rounded px-4 py-2">ذخیره</button>
+                <button class="bg-cherry-600 hover:bg-cherry-700 text-white rounded px-4 py-2">ذخیره</button>
             </form>
         </div>
         <div class="rounded-xl border border-white/10 bg-white/5 p-6">
@@ -26,7 +26,7 @@
                 @if(session('status'))
                     <div class="text-sm text-green-400">{{ session('status') }}</div>
                 @endif
-                <button class="bg-pink-600 hover:bg-pink-700 text-white rounded px-4 py-2">تغییر رمز</button>
+                <button class="bg-cherry-600 hover:bg-cherry-700 text-white rounded px-4 py-2">تغییر رمز</button>
             </form>
         </div>
     </div>

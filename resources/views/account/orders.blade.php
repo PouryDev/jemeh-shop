@@ -39,7 +39,7 @@
                             @endif
                         </td>
                         <td class="p-3 text-left">
-                            <a href="{{ route('account.orders.show',$order) }}" class="inline-flex items-center gap-1 text-pink-300 hover:text-pink-200 px-2 py-1 rounded-md hover:bg-pink-500/10 transition">جزئیات</a>
+                            <a href="{{ route('account.orders.show',$order) }}" class="inline-flex items-center gap-1 text-cherry-300 hover:text-cherry-200 px-2 py-1 rounded-md hover:bg-cherry-500/10 transition">جزئیات</a>
                         </td>
                     </tr>
                 @empty

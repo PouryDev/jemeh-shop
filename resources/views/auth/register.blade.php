@@ -15,7 +15,7 @@
                 @endif
                 <x-ui.button type="submit" class="w-full">ثبت‌نام</x-ui.button>
             </form>
-            <div class="text-xs text-gray-300 mt-3">حساب دارید؟ <a class="text-pink-400" href="{{ route('login') }}">ورود</a></div>
+            <div class="text-xs text-gray-300 mt-3">حساب دارید؟ <a class="text-cherry-400" href="{{ route('login') }}">ورود</a></div>
         </div>
     </div>
 </x-layouts.app>

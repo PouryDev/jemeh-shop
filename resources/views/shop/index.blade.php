@@ -6,7 +6,7 @@
                 <p class="text-sm text-gray-300 mt-1">ترندهای روز، کیفیت بالا، ارسال سریع</p>
             </div>
             <form method="get" class="w-full md:w-80">
-                <input name="q" value="{{ request('q') }}" placeholder="جستجوی محصول، مثل: دستبند نقره" class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-600" />
+                <input name="q" value="{{ request('q') }}" placeholder="جستجوی محصول، مثل: دستبند نقره" class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cherry-600" />
             </form>
         </div>
     </section>
@@ -29,11 +29,11 @@
                     @endif
                     <div class="p-3 pointer-events-none">
                         <div class="font-semibold truncate">{{ $product->title }}</div>
-                        <div class="text-pink-400 text-sm mt-1">{{ number_format($product->price) }} تومان</div>
+                        <div class="text-cherry-400 text-sm mt-1">{{ number_format($product->price) }} تومان</div>
                     </div>
                 </a>
                 <div class="absolute left-3 right-3 bottom-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition z-10">
-                    <button data-add-to-cart data-url="{{ route('cart.add',$product) }}" data-qty="1" class="w-full bg-pink-600/90 hover:bg-pink-700 text-white rounded-md py-1.5 text-xs shadow-lg backdrop-blur">افزودن به سبد</button>
+                    <button data-add-to-cart data-url="{{ route('cart.add',$product) }}" data-qty="1" class="w-full bg-cherry-600/90 hover:bg-cherry-700 text-white rounded-md py-1.5 text-xs shadow-lg backdrop-blur">افزودن به سبد</button>
                 </div>
             </div>
         @endforeach

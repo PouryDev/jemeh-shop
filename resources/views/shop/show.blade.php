@@ -8,7 +8,7 @@
                 <div class="mt-3">
                     <div id="product-thumbs" class="flex flex-wrap gap-2 py-1">
                         @foreach($product->images as $idx => $img)
-                            <button type="button" data-src="{{ $img->url }}" class="thumb-item w-16 h-16 rounded-lg overflow-hidden border {{ $idx === 0 ? 'border-pink-500/50' : 'border-white/10' }} hover:border-pink-500/40 transition focus:outline-none focus:ring-2 focus:ring-pink-600/30">
+                            <button type="button" data-src="{{ $img->url }}" class="thumb-item w-16 h-16 rounded-lg overflow-hidden border {{ $idx === 0 ? 'border-cherry-500/50' : 'border-white/10' }} hover:border-cherry-500/40 transition focus:outline-none focus:ring-2 focus:ring-cherry-600/30">
                                 <img src="{{ $img->url }}" class="w-full h-full object-cover" />
                             </button>
                         @endforeach
@@ -27,7 +27,7 @@
                     <span class="inline-flex items-center gap-1 text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md text-xs">ناموجود</span>
                 @endif
             </div>
-            <div class="text-pink-400 font-extrabold my-3 text-2xl">{{ number_format($product->price) }} <span class="text-sm">تومان</span></div>
+            <div class="text-cherry-400 font-extrabold my-3 text-2xl">{{ number_format($product->price) }} <span class="text-sm">تومان</span></div>
             <p class="mb-6 leading-7 text-gray-200">{{ $product->description }}</p>
             <form method="post" action="{{ route('cart.add',$product) }}" class="flex flex-wrap items-center gap-3">
                 @csrf
@@ -58,10 +58,10 @@
         if(!src) return;
         // swap image with a quick fade
         main.style.opacity = '0.85';
-        const prevActive = strip.querySelector('.thumb-item.border-pink-500\\/50');
-        if(prevActive){ prevActive.classList.remove('border-pink-500/50'); prevActive.classList.add('border-white/10'); }
+        const prevActive = strip.querySelector('.thumb-item.border-cherry-500\\/50');
+        if(prevActive){ prevActive.classList.remove('border-cherry-500/50'); prevActive.classList.add('border-white/10'); }
         btn.classList.remove('border-white/10');
-        btn.classList.add('border-pink-500/50');
+        btn.classList.add('border-cherry-500/50');
         const img = new Image();
         img.onload = () => {
           main.src = src;

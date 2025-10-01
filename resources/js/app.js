@@ -3,7 +3,7 @@ import './bootstrap';
 // Toast minimal
 window.showToast = function(message, type = 'success'){
   const el = document.createElement('div');
-  el.className = `fixed left-1/2 -translate-x-1/2 top-4 z-[9999] px-4 py-2 rounded-lg text-sm text-white ${type==='error'?'bg-red-600':'bg-pink-600'} shadow-lg anim-fade-up`;
+  el.className = `fixed left-1/2 -translate-x-1/2 top-4 z-[9999] px-4 py-2 rounded-lg text-sm text-white ${type==='error'?'bg-red-600':'bg-cherry-600'} shadow-lg anim-fade-up`;
   el.textContent = message;
   document.body.appendChild(el);
   setTimeout(()=>{ el.remove(); }, 2500);
@@ -47,11 +47,11 @@ function updateCartUI(payload){
       payload.items.forEach(it => {
         const row = document.createElement('div');
         row.className = 'flex items-center justify-between px-3 py-2 text-sm border-b border-white/10';
-        row.innerHTML = `<div class="truncate">${it.title}</div><div class="text-pink-400">${new Intl.NumberFormat('fa-IR').format(it.total)} تومان</div>`;
+        row.innerHTML = `<div class="truncate">${it.title}</div><div class="text-cherry-400">${new Intl.NumberFormat('fa-IR').format(it.total)} تومان</div>`;
         dropdown.appendChild(row);
       });
       const footer = document.createElement('div');
-      footer.className = 'px-3 py-2 text-sm text-right text-pink-400';
+      footer.className = 'px-3 py-2 text-sm text-right text-cherry-400';
       footer.textContent = `جمع: ${new Intl.NumberFormat('fa-IR').format(payload.total)} تومان`;
       dropdown.appendChild(footer);
     }

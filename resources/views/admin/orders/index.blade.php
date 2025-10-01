@@ -9,7 +9,7 @@
             @endforeach
         </x-ui.select>
         <div class="self-end">
-            <button class="w-full md:w-auto bg-pink-600 hover:bg-pink-700 text-white rounded px-4 py-2">اعمال</button>
+            <button class="w-full md:w-auto bg-cherry-600 hover:bg-cherry-700 text-white rounded px-4 py-2">اعمال</button>
         </div>
     </form>
     <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
@@ -50,7 +50,7 @@
                             </span>
                         </td>
                         <td class="p-3 text-left">
-                            <a href="{{ route('admin.orders.show',$order) }}" class="inline-flex items-center gap-1 text-pink-300 hover:text-pink-200 px-2 py-1 rounded-md hover:bg-pink-500/10 transition">مشاهده</a>
+                            <a href="{{ route('admin.orders.show',$order) }}" class="inline-flex items-center gap-1 text-cherry-300 hover:text-cherry-200 px-2 py-1 rounded-md hover:bg-cherry-500/10 transition">مشاهده</a>
                         </td>
                     </tr>
                 @empty

@@ -10,7 +10,7 @@
                     <div class="text-sm">{{ number_format(($p?->price ?? 0)*$qty) }} تومان</div>
                 </div>
             @endforeach
-            <div class="text-right mt-3 font-extrabold text-pink-400">جمع: {{ number_format($total) }} تومان</div>
+            <div class="text-right mt-3 font-extrabold text-cherry-400">جمع: {{ number_format($total) }} تومان</div>
         </x-ui.card>
         <x-ui.card class="p-4">
             <h2 class="font-bold mb-3">اطلاعات تماس و رسید</h2>

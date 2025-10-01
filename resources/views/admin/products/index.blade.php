@@ -1,7 +1,7 @@
 <x-admin.layout :title="'مدیریت محصولات'">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-xl font-bold">محصولات</h1>
-        <a href="{{ route('admin.products.create') }}" class="bg-pink-500 text-white rounded px-3 py-1">محصول جدید</a>
+        <a href="{{ route('admin.products.create') }}" class="bg-cherry-500 text-white rounded px-3 py-1">محصول جدید</a>
     </div>
     <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent">
         <div class="overflow-x-auto">
@@ -47,7 +47,7 @@
                             @endif
                         </td>
                         <td class="p-3 text-left">
-                            <a href="{{ route('admin.products.edit', $product) }}" class="inline-flex items-center gap-1 text-pink-300 hover:text-pink-200 px-2 py-1 rounded-md hover:bg-pink-500/10 transition">
+                            <a href="{{ route('admin.products.edit', $product) }}" class="inline-flex items-center gap-1 text-cherry-300 hover:text-cherry-200 px-2 py-1 rounded-md hover:bg-cherry-500/10 transition">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
                                     <path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712Z" />
                                     <path d="M19.513 8.199l-3.712-3.712-9.42 9.42a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .927.927l2.685-.8a5.25 5.25 0 0 0 2.214-1.32l9.426-9.414Z" />

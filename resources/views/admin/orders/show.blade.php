@@ -9,7 +9,7 @@
                     <div class="text-sm">{{ $item->quantity }} × {{ number_format($item->unit_price) }}</div>
                 </div>
             @endforeach
-            <div class="text-right mt-3 font-extrabold text-pink-700">جمع: {{ number_format($order->total_amount) }} تومان</div>
+            <div class="text-right mt-3 font-extrabold text-cherry-700">جمع: {{ number_format($order->total_amount) }} تومان</div>
         </div>
         <div class="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
             <div>
@@ -55,7 +55,7 @@
                 @csrf
                 <div class="space-y-1">
                     <label class="block text-xs text-gray-300">وضعیت سفارش</label>
-                    <select name="status" class="w-full rounded-lg bg-white/5 border border-white/10 focus:border-pink-600 focus:ring-2 focus:ring-pink-600/30 outline-none py-2.5 px-3 text-sm transition">
+                    <select name="status" class="w-full rounded-lg bg-white/5 border border-white/10 focus:border-cherry-600 focus:ring-2 focus:ring-cherry-600/30 outline-none py-2.5 px-3 text-sm transition">
                         @foreach(['pending','confirmed','cancelled','shipped'] as $st)
                             <option value="{{ $st }}" {{ $order->status === $st ? 'selected' : '' }}>{{ $st }}</option>
                         @endforeach

@@ -14,7 +14,7 @@
         <style>
             body { font-family: Vazirmatn, var(--font-sans); }
             .brand-grad { background: linear-gradient(135deg,#111827,#1f2937); }
-            .brand-text { background: linear-gradient(135deg,#ec4899,#8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+            .brand-text { background: linear-gradient(135deg,#bf224a,#d9345f); -webkit-background-clip: text; background-clip: text; color: transparent; }
             .glass { backdrop-filter: saturate(180%) blur(12px); background: rgba(255,255,255,0.6); }
             .no-scrollbar::-webkit-scrollbar{ display:none; }
             @keyframes fadeUp { from { opacity:0; transform: translateY(10px);} to { opacity:1; transform: none;} }
@@ -45,12 +45,12 @@
                             <span class="sr-only">سبد خرید</span>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5"><path fill="currentColor" d="M8 22q-.825 0-1.412-.587T6 20q0-.825.588-1.412T8 18q.825 0 1.413.588T10 20q0 .825-.587 1.413T8 22m8 0q-.825 0-1.412-.587T14 20q0-.825.588-1.412T16 18q.825 0 1.413.588T18 20q0 .825-.587 1.413T16 22M6.2 6l2.8 6h6.825q.15 0 .275-.075t.2-.2l2.8-5.05q.125-.225.012-.45T18.7 6zM5.225 4h13.65q.575 0 .863.462t.037.963l-3.05 5.6q-.275.5-.763.787T14.8 12H8.45l-1.1 2H18v2H8q-.775 0-1.15-.662T6.9 14.8l.35-.8L3 4H1V2h3.05z"/></svg>
                             @php $count = array_sum(session('cart', [])); @endphp
-                            <span data-cart-count class="absolute -top-2 -left-3 text-[10px] bg-pink-600 rounded-full px-1.5 py-0.5">{{ $count ?: '' }}</span>
+                            <span data-cart-count class="absolute -top-2 -left-3 text-[10px] bg-cherry-600 rounded-full px-1.5 py-0.5">{{ $count ?: '' }}</span>
                         </button>
                         <div id="cartDropdown" class="hidden absolute left-1/2 -translate-x-1/2 mt-2 w-72 max-h-80 overflow-auto rounded-xl border border-white/10 bg-[#0d0d14]/95 shadow-2xl">
                             <div id="cartDropdownList" class="py-2"></div>
                             <div class="p-2 border-t border-white/10 text-right">
-                                <a href="{{ route('cart.index') }}" class="text-xs text-pink-400 hover:text-pink-300">مشاهده سبد</a>
+                                <a href="{{ route('cart.index') }}" class="text-xs text-cherry-400 hover:text-cherry-300">مشاهده سبد</a>
                             </div>
                         </div>
                     </div>
@@ -63,7 +63,7 @@
                         </form>
                     @else
                         <a href="{{ route('login') }}" class="hover:text-white">ورود</a>
-                        <a href="{{ route('register') }}" class="bg-pink-600 hover:bg-pink-700 text-white rounded px-3 py-1">ثبت‌نام</a>
+                        <a href="{{ route('register') }}" class="bg-cherry-600 hover:bg-cherry-700 text-white rounded px-3 py-1">ثبت‌نام</a>
                     @endauth
                 </nav>
 
@@ -117,7 +117,7 @@
                         </form>
                     @else
                         <a href="{{ route('login') }}" class="block px-3 py-2 rounded hover:bg-white/5">ورود</a>
-                        <a href="{{ route('register') }}" class="block px-3 py-2 rounded bg-pink-600/10 text-white hover:bg-pink-600/20">ثبت‌نام</a>
+                        <a href="{{ route('register') }}" class="block px-3 py-2 rounded bg-cherry-600/10 text-white hover:bg-cherry-600/20">ثبت‌نام</a>
                     @endauth
                 </div>
             </nav>
