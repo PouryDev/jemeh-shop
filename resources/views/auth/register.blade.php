@@ -22,9 +22,10 @@
             
             <form method="post" action="{{ route('auth.register') }}" class="space-y-3">
                 @csrf
-                <x-ui.input name="name" :value="old('name')" label="نام و نام خانوادگی" placeholder="" required />
-                <x-ui.input name="email" type="email" :value="old('email')" label="ایمیل" placeholder="" required />
-                <x-ui.input name="password" type="password" label="رمز عبور" placeholder="" required />
+                <x-ui.input name="name" :value="old('name')" label="نام و نام خانوادگی" placeholder="علی احمدی" required />
+                <x-ui.input name="instagram_id" :value="old('instagram_id')" label="آیدی اینستاگرام" placeholder="@username" required />
+                <x-ui.input name="phone" type="tel" :value="old('phone')" label="شماره تلفن" placeholder="09123456789" required />
+                <x-ui.input name="password" type="password" label="رمز عبور" placeholder="حداقل ۶ کاراکتر" required />
                 <x-ui.input name="password_confirmation" type="password" label="تکرار رمز عبور" placeholder="" required />
                 <x-ui.button type="submit" class="w-full">ثبت‌نام</x-ui.button>
             </form>

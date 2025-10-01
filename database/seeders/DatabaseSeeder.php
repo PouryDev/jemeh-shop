@@ -17,13 +17,22 @@ class DatabaseSeeder extends Seeder
     {
         // Create or update default admin and sample user
         User::updateOrCreate(
-            ['email' => 'admin@example.com'],
-            ['name' => 'Admin', 'password' => bcrypt('password'), 'is_admin' => true]
+            ['phone' => '09123456789'],
+            [
+                'name' => 'Admin', 
+                'instagram_id' => '@admin',
+                'password' => bcrypt('password'), 
+                'is_admin' => true
+            ]
         );
 
         User::updateOrCreate(
-            ['email' => 'test@example.com'],
-            ['name' => 'Test User', 'password' => bcrypt('password')]
+            ['phone' => '09123456790'],
+            [
+                'name' => 'Test User',
+                'instagram_id' => '@testuser', 
+                'password' => bcrypt('password')
+            ]
         );
 
         // Seed many products with sample images

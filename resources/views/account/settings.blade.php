@@ -23,7 +23,8 @@
             <form method="post" action="{{ route('account.profile.update') }}" class="space-y-3">
                 @csrf
                 <x-ui.input name="name" :value="old('name',$user->name)" label="نام" placeholder="نام" required />
-                <x-ui.input name="phone" :value="old('phone',$user->phone)" label="شماره تماس" placeholder="مثلاً 0912..." />
+                <x-ui.input name="instagram_id" :value="$user->instagram_id" label="آیدی اینستاگرام" disabled readonly class="opacity-50 cursor-not-allowed" />
+                <x-ui.input name="phone" :value="$user->phone" label="شماره تماس" disabled readonly class="opacity-50 cursor-not-allowed" />
                 <x-ui.textarea name="address" label="آدرس" rows="4" placeholder="آدرس کامل">{{ old('address',$user->address) }}</x-ui.textarea>
                 @if(session('status'))
                     <div class="text-sm text-green-400">{{ session('status') }}</div>

@@ -61,7 +61,6 @@ class AccountController extends Controller
         $user = Auth::user();
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:1000',
         ]);
         \App\Models\User::query()->whereKey($user->id)->update($data);

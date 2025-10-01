@@ -19,10 +19,10 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
-        'email',
+        'instagram_id',
+        'phone',
         'password',
         'is_admin',
-        'phone',
         'address',
     ];
 
@@ -48,5 +48,15 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the name of the unique identifier for the user (for authentication).
+     *
+     * @return string
+     */
+    public function getAuthIdentifierName()
+    {
+        return 'phone'; // Use phone instead of email for authentication
     }
 }

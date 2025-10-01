@@ -17,7 +17,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'phone' => 'required|string',
             'password' => 'required|string',
         ]);
 
@@ -26,7 +26,7 @@ class AuthController extends Controller
             return redirect()->intended('/');
         }
 
-        return back()->withErrors(['email' => 'اطلاعات وارد شده نادرست است.'])->onlyInput('email');
+        return back()->withErrors(['phone' => 'شماره تلفن یا رمز عبور نادرست است.'])->onlyInput('phone');
     }
 
     public function showRegister()
@@ -38,13 +38,15 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'instagram_id' => 'required|string|max:255|unique:users,instagram_id',
+            'phone' => 'required|string|max:20|unique:users,phone',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
         $user = User::create([
             'name' => $data['name'],
-            'email' => $data['email'],
+            'instagram_id' => $data['instagram_id'],
+            'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
         ]);
 

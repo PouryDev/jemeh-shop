@@ -41,6 +41,9 @@
                 <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
                     ضمانت کیفیت و اصالت کالا
                 </div>
+                <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
+                    ارسال سه روزه به هرکجای کشور 
+                </div>
             </div>
         </div>
     </div>

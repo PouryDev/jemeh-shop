@@ -22,7 +22,7 @@
             
             <form method="post" action="{{ route('auth.login') }}" class="space-y-3">
                 @csrf
-                <x-ui.input name="email" type="email" :value="old('email')" label="ایمیل" placeholder="example@email.com" required />
+                <x-ui.input name="phone" type="tel" :value="old('phone')" label="شماره تلفن" placeholder="09123456789" required />
                 <x-ui.input name="password" type="password" label="رمز عبور" placeholder="" required />
                 <x-ui.checkbox name="remember" label="مرا به خاطر بسپار" />
                 <x-ui.button type="submit" class="w-full">ورود</x-ui.button>
