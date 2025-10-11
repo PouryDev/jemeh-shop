@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
@@ -23,17 +24,22 @@ class ProductController extends Controller
 
     public function create()
     {
-        return view('admin.products.create');
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        return view('admin.products.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
+            'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:products,slug',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'stock' => 'required|integer|min:0',
+            'has_variants' => 'boolean',
+            'has_colors' => 'boolean',
+            'has_sizes' => 'boolean',
             'is_active' => 'sometimes|boolean',
             'images.*' => 'sometimes|image|max:4096',
         ]);
@@ -59,17 +65,22 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $product->load('images');
-        return view('admin.products.edit', compact('product'));
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        return view('admin.products.edit', compact('product', 'categories'));
     }
 
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
+            'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:products,slug,'.$product->id,
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'stock' => 'required|integer|min:0',
+            'has_variants' => 'boolean',
+            'has_colors' => 'boolean',
+            'has_sizes' => 'boolean',
             'is_active' => 'sometimes|integer',
             'images.*' => 'sometimes|image|max:4096',
         ]);

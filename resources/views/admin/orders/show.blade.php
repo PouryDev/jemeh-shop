@@ -5,8 +5,29 @@
             <h2 class="font-bold mb-2">اقلام</h2>
             @foreach($order->items as $item)
                 <div class="flex items-center justify-between border-b py-2">
-                    <div>{{ $item->product->title }}</div>
-                    <div class="text-sm">{{ $item->quantity }} × {{ number_format($item->unit_price) }}</div>
+                    <div>
+                        <div class="font-medium">{{ $item->product->title }}</div>
+                        @if($item->variant_display_name)
+                            <div class="text-xs text-gray-400">{{ $item->variant_display_name }}</div>
+                        @endif
+                        @if($item->color || $item->size)
+                            <div class="text-xs text-gray-500">
+                                @if($item->color)
+                                    رنگ: {{ $item->color->name }}
+                                @endif
+                                @if($item->color && $item->size)
+                                    -
+                                @endif
+                                @if($item->size)
+                                    سایز: {{ $item->size->name }}
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                    <div class="text-sm">
+                        <div>{{ $item->quantity }} × {{ number_format($item->unit_price) }} تومان</div>
+                        <div class="text-xs text-gray-400">مجموع: {{ number_format($item->line_total) }} تومان</div>
+                    </div>
                 </div>
             @endforeach
             <div class="text-right mt-3 font-extrabold text-cherry-700">جمع: {{ number_format($order->total_amount) }} تومان</div>
