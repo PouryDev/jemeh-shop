@@ -22,10 +22,15 @@ import LoginPage from './auth/LoginPage';
 import RegisterPage from './auth/RegisterPage';
 import Layout from './Layout';
 import NotFound from './NotFound';
+import ThanksPage from './ThanksPage';
+import TopLoadingBar from './TopLoadingBar';
+import ScrollToTop from './ScrollToTop';
 
 function App() {
     return (
         <Router>
+            <ScrollToTop />
+            <TopLoadingBar />
             <Layout>
                 <Routes>
                     {/* Shop Routes */}
@@ -34,6 +39,7 @@ function App() {
                     <Route path="/404" element={<NotFound />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/thanks/:invoiceId" element={<ThanksPage />} />
                     
                     {/* Auth Routes */}
                     <Route path="/login" element={<LoginPage />} />

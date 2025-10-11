@@ -49,7 +49,10 @@ class DatabaseSeeder extends Seeder
         // 8. Create Campaigns
         $this->createCampaigns($products, $categories);
 
-        // 9. Create Sample Orders
+        // 9. Create Delivery Methods
+        $this->call(DeliveryMethodSeeder::class);
+
+        // 10. Create Sample Orders
         $this->createSampleOrders();
 
         $this->command->info('✅ Database seeding completed successfully!');

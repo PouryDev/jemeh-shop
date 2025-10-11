@@ -17,21 +17,38 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'phone' => 'required|string',
+            'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        // Find user by phone
-        $user = User::where('phone', $request->phone)->first();
+        // Find user by instagram_id or phone
+        $user = User::where('instagram_id', $request->username)
+            ->orWhere('phone', $request->username)
+            ->first();
 
         // Check if user exists and password is correct
         if ($user && Hash::check($request->password, $user->password)) {
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'user' => $user
+                ]);
+            }
+            
             return redirect()->intended('/');
         }
 
-        return back()->withErrors(['phone' => 'شماره تلفن یا رمز عبور نادرست است.'])->onlyInput('phone');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اطلاعات وارد شده صحیح نیست.'
+            ], 401);
+        }
+
+        return back()->withErrors(['username' => 'شماره تلفن یا آیدی اینستاگرام یا رمز عبور نادرست است.'])->onlyInput('username');
     }
 
     public function showRegister()
@@ -56,6 +73,15 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
+        $request->session()->regenerate();
+        
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'user' => $user
+            ], 201);
+        }
+        
         return redirect('/');
     }
 

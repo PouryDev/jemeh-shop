@@ -1,11 +1,12 @@
 import React from 'react';
+import { convertPersianToEnglish } from '../utils/convertPersianNumbers';
 
 function CheckoutAuthModal({ open, onClose, onSuccess }) {
     const [tab, setTab] = React.useState('login'); // 'login' | 'register'
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState(null);
-    const [loginForm, setLoginForm] = React.useState({ email: '', password: '' });
-    const [registerForm, setRegisterForm] = React.useState({ name: '', email: '', phone: '', password: '', password_confirmation: '' });
+    const [loginForm, setLoginForm] = React.useState({ username: '', password: '' });
+    const [registerForm, setRegisterForm] = React.useState({ name: '', instagram_id: '', phone: '', password: '', password_confirmation: '' });
 
     React.useEffect(() => {
         if (!open) {
@@ -18,11 +19,15 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
         e.preventDefault();
         setLoading(true); setError(null);
         try {
-            const res = await fetch('/api/auth/login', {
+            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const res = await fetch('/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
                 credentials: 'same-origin',
-                body: JSON.stringify(loginForm),
+                body: JSON.stringify({
+                    username: convertPersianToEnglish(loginForm.username),
+                    password: loginForm.password
+                }),
             });
             const data = await res.json();
             if (!res.ok || !data?.success) throw new Error(data?.message || 'login-failed');
@@ -39,11 +44,18 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
         e.preventDefault();
         setLoading(true); setError(null);
         try {
-            const res = await fetch('/api/auth/register', {
+            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const res = await fetch('/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
                 credentials: 'same-origin',
-                body: JSON.stringify(registerForm),
+                body: JSON.stringify({
+                    name: registerForm.name,
+                    instagram_id: registerForm.instagram_id,
+                    phone: convertPersianToEnglish(registerForm.phone),
+                    password: registerForm.password,
+                    password_confirmation: registerForm.password_confirmation
+                }),
             });
             const data = await res.json();
             if (!res.ok || !data?.success) throw new Error(data?.message || 'register-failed');
@@ -78,8 +90,8 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
                         {tab === 'login' ? (
                             <form onSubmit={handleLogin} className="space-y-3">
                                 <div>
-                                    <label className="block text-sm text-gray-300 mb-1">ایمیل</label>
-                                    <input type="email" value={loginForm.email} onChange={(e)=>setLoginForm({...loginForm, email:e.target.value})} required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
+                                    <label className="block text-sm text-gray-300 mb-1">آیدی اینستاگرام یا شماره تلفن</label>
+                                    <input type="text" value={loginForm.username} onChange={(e)=>setLoginForm({...loginForm, username:convertPersianToEnglish(e.target.value)})} placeholder="@username یا 09123456789" required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">رمز عبور</label>
@@ -94,12 +106,12 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
                                     <input value={registerForm.name} onChange={(e)=>setRegisterForm({...registerForm, name:e.target.value})} required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-gray-300 mb-1">ایمیل</label>
-                                    <input type="email" value={registerForm.email} onChange={(e)=>setRegisterForm({...registerForm, email:e.target.value})} required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
+                                    <label className="block text-sm text-gray-300 mb-1">آیدی اینستاگرام</label>
+                                    <input type="text" value={registerForm.instagram_id} onChange={(e)=>setRegisterForm({...registerForm, instagram_id:e.target.value})} placeholder="@username" required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">شماره تماس</label>
-                                    <input value={registerForm.phone} onChange={(e)=>setRegisterForm({...registerForm, phone:e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
+                                    <input value={registerForm.phone} onChange={(e)=>setRegisterForm({...registerForm, phone:convertPersianToEnglish(e.target.value)})} placeholder="09123456789" required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>

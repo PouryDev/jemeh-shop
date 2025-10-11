@@ -15,6 +15,7 @@ class Invoice extends Model
         'order_id',
         'invoice_number',
         'amount',
+        'delivery_fee',
         'currency',
         'status',
         'due_date',

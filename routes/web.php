@@ -14,23 +14,21 @@ use App\Http\Controllers\Admin\ColorController as AdminColorController;
 use App\Http\Controllers\Admin\SizeController as AdminSizeController;
 use App\Http\Controllers\Admin\ProductVariantController as AdminProductVariantController;
 use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
+use App\Http\Controllers\Admin\DeliveryMethodController as AdminDeliveryMethodController;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AccountController;
 
-Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+// Cart routes (POST/DELETE only, GET handled by React SPA)
 Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
 Route::delete('/cart/remove/{cartKey}', [CartController::class, 'remove'])->name('cart.remove');
 Route::get('/cart/json', [CartController::class, 'summary'])->name('cart.json');
 
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+// Checkout routes (POST only, GET handled by React SPA)
 Route::post('/checkout', [CheckoutController::class, 'place'])->name('checkout.place');
-Route::get('/thanks/{invoice}', [CheckoutController::class, 'thanks'])->name('checkout.thanks');
 
-// Auth
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+// Auth routes (POST only, GET handled by React SPA)
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
-Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
@@ -64,14 +62,13 @@ Route::middleware([EnsureUserIsAdmin::class])->prefix('admin')->name('admin.')->
     Route::resource('campaigns', AdminCampaignController::class);
     Route::post('campaigns/{campaign}/toggle-status', [AdminCampaignController::class, 'toggleStatus'])->name('campaigns.toggle-status');
     Route::get('campaigns-analytics', [AdminCampaignController::class, 'analytics'])->name('campaigns.analytics');
+    
+    Route::resource('delivery-methods', AdminDeliveryMethodController::class);
+    Route::post('delivery-methods/{deliveryMethod}/toggle-status', [AdminDeliveryMethodController::class, 'toggleStatus'])->name('delivery-methods.toggle-status');
 });
 
-// Account (auth required)
+// Account (auth required) - POST only, GET handled by React SPA
 Route::middleware('auth')->group(function () {
-    Route::get('/account', [AccountController::class, 'index'])->name('account.index');
-    Route::get('/account/orders', [AccountController::class, 'orders'])->name('account.orders');
-    Route::get('/account/orders/{order}', [AccountController::class, 'orderShow'])->name('account.orders.show');
-    Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
     Route::post('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 });

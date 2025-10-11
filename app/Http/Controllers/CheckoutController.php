@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\DeliveryMethod;
 use App\Services\DiscountCodeService;
 use App\Services\CampaignService;
 use Illuminate\Http\Request;
@@ -68,6 +69,7 @@ class CheckoutController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:50',
             'customer_address' => 'required|string|max:1000',
+            'delivery_method_id' => 'required|exists:delivery_methods,id',
             'receipt' => 'nullable|image|max:4096',
             'discount_code' => 'nullable|string|max:50',
         ]);
@@ -76,6 +78,10 @@ class CheckoutController extends Controller
         if (empty($cart)) {
             return redirect()->route('shop.index');
         }
+
+        // Get delivery method
+        $deliveryMethod = DeliveryMethod::findOrFail($data['delivery_method_id']);
+        $deliveryFee = $deliveryMethod->fee;
 
         $products = Product::query()->whereIn('id', array_keys($cart))->get()->keyBy('id');
         $total = 0;
@@ -102,7 +108,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $finalAmount = $total - $discountAmount;
+        $finalAmount = $total - $discountAmount + $deliveryFee;
 
         $receiptPath = null;
         if ($request->hasFile('receipt')) {
@@ -111,11 +117,13 @@ class CheckoutController extends Controller
 
         $order = Order::create([
             'user_id' => $request->user() ? $request->user()->id : null,
+            'delivery_method_id' => $data['delivery_method_id'],
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
             'customer_address' => $data['customer_address'],
             'total_amount' => $total,
-            'discount_code' => $data['discount_code'],
+            'delivery_fee' => $deliveryFee,
+            'discount_code' => $data['discount_code'] ?? null,
             'discount_amount' => $discountAmount,
             'final_amount' => $finalAmount,
             'status' => 'pending',
@@ -201,6 +209,7 @@ class CheckoutController extends Controller
             'order_id' => $order->id,
             'invoice_number' => 'INV-'.Str::upper(Str::random(8)),
             'amount' => $finalAmount,
+            'delivery_fee' => $deliveryFee,
             'currency' => 'IRR',
             'status' => 'unpaid',
         ]);

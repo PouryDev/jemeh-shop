@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=vazirmatn:400,500,600,700,800,900&display=swap" rel="stylesheet" />
 
+    <!-- Bootstrap User Data -->
+    <script>
+        window.__USER__ = @json(auth()->user());
+    </script>
+
     <!-- Scripts -->
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/react-app.jsx'])

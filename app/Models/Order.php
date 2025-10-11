@@ -14,10 +14,12 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'delivery_method_id',
         'customer_name',
         'customer_phone',
         'customer_address',
         'total_amount',
+        'delivery_fee',
         'discount_code',
         'discount_amount',
         'final_amount',
@@ -28,6 +30,11 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function deliveryMethod(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryMethod::class);
     }
 
     public function items(): HasMany

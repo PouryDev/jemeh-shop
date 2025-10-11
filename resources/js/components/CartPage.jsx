@@ -123,33 +123,36 @@ function CartPage() {
                             {items.map((item) => (
                                 <div key={item.cart_key} className="p-3 md:p-4">
                                     <div className="flex items-start gap-3 md:gap-4">
-                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-white/10 flex items-center justify-center text-2xl">🛍️</div>
+                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-white/10 flex items-center justify-center text-2xl flex-shrink-0">🛍️</div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-3">
+                                            <div className="flex flex-col gap-2">
                                                 <div>
-                                                    <div className="font-semibold md:font-bold text-white truncate max-w-[200px] md:max-w-none">{item.title}</div>
+                                                    <div className="font-semibold md:font-bold text-white">{item.title}</div>
                                                     {item.variant_display_name && (
                                                         <div className="text-xs text-gray-300 mt-0.5">{item.variant_display_name}</div>
                                                     )}
-                                            <div className="text-xs md:text-sm text-cherry-400 mt-1">{formatPrice(item.price)} تومان × {item.quantity}</div>
+                                                    <div className="text-xs text-cherry-400 mt-1">{formatPrice(item.price)} تومان</div>
                                                 </div>
-                                        <div className="text-left flex items-center gap-3">
-                                            <div className="inline-flex items-center gap-1 bg-black/30 border border-white/10 rounded-full px-1.5 py-1">
-                                                <button onClick={() => decrementItem(item)} disabled={removingKey === item.cart_key} className="w-7 h-7 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/15 text-white text-xs">−</button>
-                                                <div className="min-w-[28px] text-center text-white text-[11px] bg-black/20 rounded px-1 py-0.5">{item.quantity}</div>
-                                                <button onClick={() => incrementItem(item)} disabled={removingKey === item.cart_key} className="w-7 h-7 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-cherry-600 to-pink-600 hover:from-cherry-500 hover:to-pink-500 text-white text-xs">+</button>
-                                            </div>
-                                            <div className="font-extrabold text-white text-sm md:text-base whitespace-nowrap">{formatPrice(item.total)} تومان</div>
-                                        </div>
-                                            </div>
-                                    <div className="mt-2 flex justify-end">
-                                                <button
-                                                    onClick={() => handleRemove(item.cart_key)}
-                                                    disabled={removingKey === item.cart_key}
-                                                    className="text-xs md:text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
-                                                >
-                                                    {removingKey === item.cart_key ? 'حذف...' : 'حذف'}
-                                                </button>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="inline-flex items-center gap-1 bg-black/30 border border-white/10 rounded-full px-1.5 py-1">
+                                                        <button onClick={() => decrementItem(item)} disabled={removingKey === item.cart_key} className="w-7 h-7 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/15 text-white text-xs">−</button>
+                                                        <div className="min-w-[28px] text-center text-white text-[11px] bg-black/20 rounded px-1 py-0.5">{item.quantity}</div>
+                                                        <button onClick={() => incrementItem(item)} disabled={removingKey === item.cart_key} className="w-7 h-7 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-cherry-600 to-pink-600 hover:from-cherry-500 hover:to-pink-500 text-white text-xs">+</button>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="font-extrabold text-white text-sm md:text-base whitespace-nowrap">{formatPrice(item.total)} <span className="text-xs text-gray-300">تومان</span></div>
+                                                        <button
+                                                            onClick={() => handleRemove(item.cart_key)}
+                                                            disabled={removingKey === item.cart_key}
+                                                            className="w-8 h-8 inline-flex items-center justify-center rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 disabled:opacity-50 transition flex-shrink-0"
+                                                            aria-label="حذف"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DeliveryMethodController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,7 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/campaigns/active', [CampaignController::class, 'active']);
 Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
 
 // Search endpoint for React
 Route::get('/search', [ProductController::class, 'search']);
