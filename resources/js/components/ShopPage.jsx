@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import LoadingSpinner from './LoadingSpinner';
+import SearchDropdown from './SearchDropdown';
 
 function ShopPage() {
     const [products, setProducts] = useState([]);
@@ -14,6 +15,43 @@ function ShopPage() {
     const [bestSellers, setBestSellers] = useState([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+
+    // Function to get emoji for category
+    const getCategoryEmoji = (categoryName) => {
+        const emojiMap = {
+            'لباس': '👕',
+            'شلوار': '👖',
+            'کفش': '👟',
+            'کیف': '👜',
+            'ساعت': '⌚',
+            'عینک': '🕶️',
+            'جواهرات': '💍',
+            'اکسسوری': '🎀',
+            'مردانه': '👔',
+            'زنانه': '👗',
+            'بچه': '👶',
+            'ورزشی': '🏃',
+            'رسمی': '🤵',
+            'کژوال': '👕',
+            'تابستانی': '☀️',
+            'زمستانی': '❄️'
+        };
+        
+        // Try to find exact match first
+        if (emojiMap[categoryName]) {
+            return emojiMap[categoryName];
+        }
+        
+        // Try to find partial match
+        for (const [key, emoji] of Object.entries(emojiMap)) {
+            if (categoryName.includes(key) || key.includes(categoryName)) {
+                return emoji;
+            }
+        }
+        
+        // Default emoji
+        return '🛍️';
+    };
 
     // Initialize search query from URL
     useEffect(() => {
@@ -111,17 +149,11 @@ function ShopPage() {
         fetchBestSellers();
     }, [fetchProducts, fetchCampaigns, fetchCategories, fetchBestSellers, searchQuery]);
 
-    // Handle search
-    const handleSearch = (query) => {
+    // Handle search from URL parameters
+    const handleSearchFromURL = (query) => {
         setSearchQuery(query);
         setCurrentPage(1);
         setProducts([]);
-        
-        // Update URL
-        const newSearchParams = new URLSearchParams();
-        if (query) newSearchParams.set('q', query);
-        setSearchParams(newSearchParams);
-        
         fetchProducts(1, query);
     };
 
@@ -136,8 +168,7 @@ function ShopPage() {
     useEffect(() => {
         const q = searchParams.get('q');
         if (q && q !== searchQuery) {
-            setSearchQuery(q);
-            fetchProducts(1, q);
+            handleSearchFromURL(q);
         }
     }, [searchParams]);
 
@@ -162,26 +193,35 @@ function ShopPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-            {/* Hero Section */}
-            <section className="relative py-10 md:py-14 px-4">
-                <div className="max-w-7xl mx-auto">
-                    <div className="rounded-2xl glass-card soft-shadow p-5 md:p-7 border border-white/10">
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-extrabold text-white">
-                                    استایل مینیمال با عطر شمال
-                                </h1>
-                                <p className="text-sm text-gray-300 mt-1">
-                                    انتخابی هوشمندانه برای استایل روزمره
-                                </p>
-                            </div>
-                            <div className="w-full md:w-80">
-                                <SearchForm onSearch={handleSearch} initialQuery={searchQuery} />
-                            </div>
+            {/* Categories Carousel */}
+            {categories.length > 0 && (
+                <section className="px-4 py-4">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ WebkitOverflowScrolling: 'touch' }}>
+                            {categories.map((category) => (
+                                <Link
+                                    key={category.id}
+                                    to={`/category/${category.id}`}
+                                    className="snap-start shrink-0 flex-none"
+                                >
+                                    <div className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full px-4 py-2 transition-all duration-200 min-w-fit">
+                                        <span className="text-lg">{getCategoryEmoji(category.name)}</span>
+                                        <span className="text-white text-sm font-medium whitespace-nowrap">{category.name}</span>
+                                    </div>
+                                </Link>
+                            ))}
                         </div>
                     </div>
+                </section>
+            )}
+            {/* Search Bar */}
+            <section className="px-4 mb-6">
+                <div className="max-w-7xl mx-auto">
+                    <SearchDropdown initialQuery={searchQuery} />
                 </div>
             </section>
+
+            
 
             {/* Best Sellers Carousel */}
             {bestSellers.length > 0 && (
@@ -190,7 +230,7 @@ function ShopPage() {
                         <h2 className="text-white font-bold text-lg mb-4">محبوب‌ترین‌ها</h2>
                         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ WebkitOverflowScrolling: 'touch' }}>
                             {bestSellers.map((p, i) => (
-                                <div key={p.id} className="snap-start w-[280px] sm:w-72 shrink-0 flex-none">
+                                <div key={p.id} className="snap-start w-[200px] sm:w-72 shrink-0 flex-none">
                                     <ProductCard product={p} index={i} />
                                 </div>
                             ))}
@@ -199,13 +239,72 @@ function ShopPage() {
                 </section>
             )}
 
+            {/* Instagram Banner */}
+            <section className="px-4 mb-8">
+                <div className="max-w-7xl mx-auto">
+                    <a 
+                        href="https://instagram.com/jeme.shopp" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="block group"
+                    >
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 p-1 shadow-2xl">
+                            <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl p-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
+                                                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-white font-bold text-lg">jeme.shopp</h3>
+                                                <p className="text-gray-300 text-sm">اینستاگرام رسمی</p>
+                                            </div>
+                                        </div>
+                                        <h2 className="text-white font-bold text-xl mb-2">
+                                            🎉 جدیدترین محصولات و تخفیف‌های ویژه
+                                        </h2>
+                                        <p className="text-gray-300 text-sm mb-4">
+                                            برای دیدن آخرین محصولات، استایل‌های جدید و تخفیف‌های ویژه ما را در اینستاگرام دنبال کنید
+                                        </p>
+                                        <div className="flex items-center gap-2 text-pink-400 font-semibold text-sm group-hover:text-pink-300 transition-colors">
+                                            <span>فالو کنید</span>
+                                            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div className="hidden md:block">
+                                        <div className="relative">
+                                            <div className="w-24 h-24 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-full flex items-center justify-center">
+                                                <div className="text-4xl">📱</div>
+                                            </div>
+                                            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center animate-pulse">
+                                                <span className="text-white text-xs font-bold">+</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
             {/* Category Carousels */}
             {categories.slice(0, 5).map((cat) => (
                 <section key={cat.id} className="px-4 mb-8">
                     <div className="max-w-7xl mx-auto">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-white font-bold text-lg">{cat.name}</h2>
-                            <button className="text-sm text-cherry-400 hover:text-cherry-300">مشاهده همه</button>
+                            <Link 
+                                to={`/category/${cat.id}`} 
+                                className="text-sm text-cherry-400 hover:text-cherry-300 transition-colors"
+                            >
+                                مشاهده همه
+                            </Link>
                         </div>
                         <CategoryCarousel categoryId={cat.id} />
                     </div>
@@ -243,7 +342,14 @@ function ShopPage() {
                                 متأسفانه محصولی با این کلمات پیدا نشد
                             </p>
                             <button
-                                onClick={() => handleSearch('')}
+                                onClick={() => {
+                                    setSearchQuery('');
+                                    setCurrentPage(1);
+                                    setProducts([]);
+                                    const newSearchParams = new URLSearchParams();
+                                    setSearchParams(newSearchParams);
+                                    fetchProducts(1, '');
+                                }}
                                 className="bg-cherry-600 hover:bg-cherry-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
                             >
                                 پاک کردن جستجو
@@ -289,52 +395,6 @@ function ShopPage() {
     );
 }
 
-// Search Form Component
-function SearchForm({ onSearch, initialQuery }) {
-    const [query, setQuery] = useState(initialQuery);
-    const [timeoutId, setTimeoutId] = useState(null);
-
-    useEffect(() => {
-        setQuery(initialQuery);
-    }, [initialQuery]);
-
-    const handleInputChange = (e) => {
-        const value = e.target.value;
-        setQuery(value);
-        
-        // Clear existing timeout
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-        
-        // Set new timeout for search
-        const newTimeoutId = setTimeout(() => {
-            onSearch(value);
-        }, 500);
-        
-        setTimeoutId(newTimeoutId);
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-        onSearch(query);
-    };
-
-    return (
-        <form onSubmit={handleSubmit}>
-            <input
-                type="text"
-                value={query}
-                onChange={handleInputChange}
-                placeholder="جستجوی محصول، مثل: دستبند نقره"
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cherry-600 text-white"
-            />
-        </form>
-    );
-}
 
 // Campaign Card Component
 function CampaignCard({ campaign }) {
@@ -374,7 +434,7 @@ function CategoryCarousel({ categoryId }) {
     return (
         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 [-ms-overflow-style:none] [scrollbar-width:none]" style={{ WebkitOverflowScrolling: 'touch' }}>
             {items.map((p, i) => (
-                <div key={p.id} className="snap-start w-[280px] sm:w-72 shrink-0 flex-none">
+                <div key={p.id} className="snap-start w-[200px] sm:w-72 shrink-0 flex-none">
                     <ProductCard product={p} index={i} />
                 </div>
             ))}

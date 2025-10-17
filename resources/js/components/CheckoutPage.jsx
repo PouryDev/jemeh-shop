@@ -1,39 +1,77 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import CheckoutAuthModal from './CheckoutAuthModal';
-import { convertPersianToEnglish } from '../utils/convertPersianNumbers';
+import AddressDropdown from './AddressDropdown';
+import AddressModal from './AddressModal';
+import FileUpload from './FileUpload';
+import { apiRequest } from '../utils/csrfToken';
 
 function CheckoutPage() {
-    const navigate = useNavigate();
+    const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
-    const [cart, setCart] = React.useState({ items: [], total: 0, count: 0 });
-    const [form, setForm] = React.useState({ name: '', phone: '', address: '', discount_code: '', delivery_method_id: '' });
+    const [cart, setCart] = React.useState({ 
+        items: [], 
+        total: 0, 
+        originalTotal: 0,
+        totalDiscount: 0,
+        count: 0 
+    });
+    const [form, setForm] = React.useState({ 
+        name: '', 
+        phone: '', 
+        address: '', 
+        discount_code: '', 
+        receipt: null,
+        delivery_method_id: null
+    });
     const [submitting, setSubmitting] = React.useState(false);
     const [discountInfo, setDiscountInfo] = React.useState(null);
     const [deliveryMethods, setDeliveryMethods] = React.useState([]);
-    const [selectedDelivery, setSelectedDelivery] = React.useState(null);
-    const [receiptPreview, setReceiptPreview] = React.useState(null);
-    const [receiptFile, setReceiptFile] = React.useState(null);
+    const [selectedDeliveryMethod, setSelectedDeliveryMethod] = React.useState(null);
 
     const formatPrice = (v) => {
         try { return Number(v || 0).toLocaleString('fa-IR'); } catch { return v; }
     };
 
-    const [authUser, setAuthUser] = React.useState(null);
     const [authOpen, setAuthOpen] = React.useState(false);
+    const [addresses, setAddresses] = React.useState([]);
+    const [selectedAddress, setSelectedAddress] = React.useState(null);
+    const [addressModalOpen, setAddressModalOpen] = React.useState(false);
+    const [editingAddress, setEditingAddress] = React.useState(null);
+    const [addressLoading, setAddressLoading] = React.useState(false);
 
-        React.useEffect(() => {
-        // Bootstrap user from Laravel (window.__USER__ or session)
-        const bootstrapUser = window.__USER__ || null;
-        if (bootstrapUser) {
-            setAuthUser(bootstrapUser);
+    // Update form when user changes
+    React.useEffect(() => {
+        if (authUser) {
             setForm((prev) => ({
                 ...prev,
-                name: bootstrapUser.name || '',
-                phone: bootstrapUser.phone || '',
-                address: bootstrapUser.address || '',
+                name: authUser.name || '',
+                phone: authUser.phone || '',
+                address: authUser.address || '',
             }));
+        }
+    }, [authUser]);
+
+    // Open auth modal if user is not authenticated (only after auth loading is complete)
+    React.useEffect(() => {
+        if (!authLoading) {
+            if (!isAuthenticated) {
+                setAuthOpen(true);
+            } else {
+                setAuthOpen(false);
+            }
+        }
+    }, [isAuthenticated, authLoading]);
+
+    const fetchDeliveryMethods = React.useCallback(async () => {
+        try {
+            const res = await apiRequest('/api/delivery-methods');
+            if (!res.ok) throw new Error('failed');
+            const data = await res.json();
+            setDeliveryMethods(data.data || []);
+        } catch (e) {
+            console.error('Failed to fetch delivery methods:', e);
         }
     }, []);
 
@@ -41,10 +79,16 @@ function CheckoutPage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/cart/json', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+            const res = await apiRequest('/cart/json');
             if (!res.ok) throw new Error('failed');
             const data = await res.json();
-            setCart({ items: data.items || [], total: data.total || 0, count: data.count || 0 });
+            setCart({ 
+                items: data.items || [], 
+                total: data.total || 0, 
+                originalTotal: data.original_total || data.total || 0,
+                totalDiscount: data.total_discount || 0,
+                count: data.count || 0 
+            });
         } catch (e) {
             setError('خطا در دریافت اطلاعات سبد');
         } finally {
@@ -55,37 +99,87 @@ function CheckoutPage() {
     React.useEffect(() => {
         fetchCart();
         fetchDeliveryMethods();
-    }, [fetchCart]);
+    }, [fetchCart, fetchDeliveryMethods]);
 
-    const fetchDeliveryMethods = async () => {
+    // Fetch addresses when user is authenticated
+    React.useEffect(() => {
+        if (authUser) {
+            fetchAddresses();
+        }
+    }, [authUser]);
+
+    const fetchAddresses = async () => {
+        if (!authUser) return;
         try {
-            const res = await fetch('/api/delivery-methods', { headers: { 'Accept': 'application/json' } });
-            if (!res.ok) throw new Error('failed');
-            const data = await res.json();
-            if (data.success) {
-                setDeliveryMethods(data.data || []);
-                if (data.data && data.data.length > 0) {
-                    const firstMethod = data.data[0];
-                    setSelectedDelivery(firstMethod);
-                    setForm((prev) => ({ ...prev, delivery_method_id: firstMethod.id }));
+            const res = await apiRequest('/api/addresses');
+            if (res.ok) {
+                const data = await res.json();
+                setAddresses(data.data || []);
+                // Set default address as selected
+                const defaultAddr = data.data?.find(addr => addr.is_default);
+                if (defaultAddr) {
+                    setSelectedAddress(defaultAddr);
+                    setForm(prev => ({ ...prev, address: defaultAddr.address }));
                 }
             }
-        } catch (e) {}
+        } catch (error) {
+            console.error('Failed to fetch addresses:', error);
+        }
+    };
+
+    const handleAddressSelect = (address) => {
+        setSelectedAddress(address);
+        setForm(prev => ({ ...prev, address: address.address }));
+    };
+
+    const handleAddNewAddress = () => {
+        setEditingAddress(null);
+        setAddressModalOpen(true);
+    };
+
+    const handleSaveAddress = async (addressData) => {
+        setAddressLoading(true);
+        try {
+            const url = editingAddress ? `/api/addresses/${editingAddress.id}` : '/api/addresses';
+            const method = editingAddress ? 'PUT' : 'POST';
+            
+            const res = await apiRequest(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(addressData)
+            });
+
+            if (res.ok) {
+                await fetchAddresses(); // Refresh addresses
+                setAddressModalOpen(false);
+                setEditingAddress(null);
+            }
+        } catch (error) {
+            console.error('Failed to save address:', error);
+        } finally {
+            setAddressLoading(false);
+        }
     };
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        const finalValue = name === 'phone' ? convertPersianToEnglish(value) : value;
-        setForm((prev) => ({ ...prev, [name]: finalValue }));
+        const { name, value, type, files } = e.target;
+        if (type === 'file') {
+            setForm((prev) => ({ ...prev, [name]: files[0] || null }));
+        } else {
+            setForm((prev) => ({ ...prev, [name]: value }));
+        }
     };
 
-    const handleFileChange = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setReceiptFile(file);
-        const reader = new FileReader();
-        reader.onloadend = () => setReceiptPreview(reader.result);
-        reader.readAsDataURL(file);
+    const handleFileChange = (name, file) => {
+        setForm((prev) => ({ ...prev, [name]: file }));
+    };
+
+    const handleDeliveryMethodChange = (methodId) => {
+        const method = deliveryMethods.find(m => m.id === methodId);
+        setSelectedDeliveryMethod(method);
+        setForm((prev) => ({ ...prev, delivery_method_id: methodId }));
     };
 
     async function applyDiscount() {
@@ -96,6 +190,18 @@ function CheckoutPage() {
 
     async function handleSubmit(e) {
         e.preventDefault();
+        
+        // Validate required fields
+        if (!form.receipt) {
+            setError('لطفاً فیش واریزی را آپلود کنید');
+            return;
+        }
+        
+        if (!form.delivery_method_id) {
+            setError('لطفاً روش ارسال را انتخاب کنید');
+            return;
+        }
+        
         // Gate by auth: if not logged in, open auth modal instead of submit
         if (!authUser) {
             setAuthOpen(true);
@@ -103,31 +209,35 @@ function CheckoutPage() {
         }
         setSubmitting(true);
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            // Use FormData for file upload
             const formData = new FormData();
             formData.append('customer_name', form.name);
-            formData.append('customer_phone', convertPersianToEnglish(form.phone));
+            formData.append('customer_phone', form.phone);
             formData.append('customer_address', form.address);
+            formData.append('receipt', form.receipt);
             formData.append('delivery_method_id', form.delivery_method_id);
-            if (form.discount_code) formData.append('discount_code', form.discount_code);
-            if (receiptFile) formData.append('receipt', receiptFile);
-
-            const res = await fetch('/checkout', {
+            if (form.discount_code) {
+                formData.append('discount_code', form.discount_code);
+            }
+            
+            const res = await apiRequest('/checkout', {
                 method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                credentials: 'same-origin',
                 body: formData,
             });
-            if (!res.ok) throw new Error('failed');
-            const result = await res.json();
-            // Navigate to thanks page
-            navigate('/thanks/last');
-            // Clear cart
-            try { localStorage.setItem('cart', JSON.stringify([])); } catch {}
-            window.dispatchEvent(new Event('cart:update'));
+            
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'خطا در ثبت سفارش');
+            }
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                // Redirect to React SPA thanks page
+                window.location.href = `/thanks/${data.invoice.id}`;
+            } else {
+                throw new Error(data.message || 'خطا در ثبت سفارش');
+            }
         } catch (e) {
             setError('ثبت سفارش با خطا مواجه شد');
         } finally {
@@ -135,26 +245,304 @@ function CheckoutPage() {
         }
     }
 
-    const deliveryFee = selectedDelivery?.fee || 0;
-
     const finalAmount = React.useMemo(() => {
-        const subtotal = cart.total;
-        const discount = discountInfo?.amount || 0;
-        const delivery = deliveryFee;
-        return Math.max(0, subtotal - discount + delivery);
-    }, [cart.total, discountInfo, deliveryFee]);
+        let total = cart.total;
+        if (selectedDeliveryMethod) {
+            total += selectedDeliveryMethod.fee;
+        }
+        if (discountInfo) {
+            total = Math.max(0, total - (discountInfo.amount || 0));
+        }
+        return total;
+    }, [cart.total, selectedDeliveryMethod, discountInfo]);
 
     return (
-        <div className="min-h-screen pb-28 md:pb-8 pt-6 md:pt-8">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+            {/* Mobile Header */}
+            <div className="sticky top-0 z-30 bg-black/20 backdrop-blur-md border-b border-white/10 lg:hidden">
+                <div className="max-w-md mx-auto px-4 py-4">
+                    <h1 className="text-xl font-bold text-white text-center">تسویه حساب</h1>
+                </div>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden lg:block pt-6 md:pt-8">
             <div className="max-w-7xl mx-auto px-4">
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-4 md:mb-6">تسویه حساب</h1>
+                </div>
+            </div>
 
                 {loading ? (
-                    <div className="text-gray-300">در حال بارگذاری...</div>
+                <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-cherry-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
                 ) : error ? (
-                    <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 p-3 text-rose-300">{error}</div>
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="max-w-md mx-auto px-4 py-6">
+                    <div className="bg-red-500/10 backdrop-blur-sm rounded-xl p-4 border border-red-500/20">
+                        <div className="text-red-400 text-center">{error}</div>
+                    </div>
+                </div>
+            ) : (
+                <div className="max-w-md mx-auto lg:max-w-7xl px-4 py-6 lg:py-8">
+                    {/* Mobile Layout */}
+                    <div className="lg:hidden space-y-4">
+                        {/* Order Summary Card */}
+                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                            <div className="bg-gradient-to-r from-white/10 to-white/0 px-4 py-3">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-white font-bold text-lg">جزئیات سفارش</h2>
+                                    <div className="text-xs text-gray-300 bg-white/10 px-2 py-1 rounded-full">{cart.count} قلم</div>
+                                </div>
+                            </div>
+                            
+                            <div className="p-4 space-y-3">
+                                {cart.items.map((item) => (
+                                    <div key={item.cart_key} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cherry-500/20 to-pink-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                                            🛍️
+                                        </div>
+                                        
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-white font-semibold text-sm leading-tight truncate">{item.title}</h3>
+                                            {item.variant_display_name && (
+                                                <div className="text-xs text-gray-400 mt-0.5">{item.variant_display_name}</div>
+                                            )}
+                                            {item.campaign && (
+                                                <div className="text-xs text-green-400 mt-0.5 flex items-center gap-1">
+                                                    <span>🎉</span>
+                                                    <span>{item.campaign.name}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {item.original_price && item.original_price !== item.price && (
+                                                    <span className="text-xs text-gray-500 line-through">{formatPrice(item.original_price)}</span>
+                                                )}
+                                                <span className="text-xs text-gray-400">{item.quantity} × {formatPrice(item.price)}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="text-right">
+                                            <div className="text-white font-bold text-sm">{formatPrice(item.total)}</div>
+                                            {item.total_discount > 0 && (
+                                                <div className="text-xs text-green-400">صرفه‌جویی: {formatPrice(item.total_discount)}</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* Campaign Discount Summary */}
+                            {cart.totalDiscount > 0 && (
+                                <div className="mx-4 mb-4">
+                                    <div className="bg-green-500/10 backdrop-blur-sm rounded-xl p-3 border border-green-500/20">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-green-400 text-lg">🎉</span>
+                                                <div>
+                                                    <div className="text-green-400 font-medium text-sm">تخفیف کمپین</div>
+                                                    <div className="text-green-300 text-xs">صرفه‌جویی از کمپین‌های فعال</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-green-400 font-bold">{formatPrice(cart.totalDiscount)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Price Summary */}
+                            <div className="px-4 pb-4 space-y-2">
+                                {cart.totalDiscount > 0 && (
+                                    <div className="flex items-center justify-between text-green-400 text-sm">
+                                        <span className="flex items-center gap-1">
+                                            <span>🎉</span>
+                                            <span>تخفیف کمپین</span>
+                                        </span>
+                                        <span className="font-bold">-{formatPrice(cart.totalDiscount)}</span>
+                                    </div>
+                                )}
+                                
+                                <div className="flex items-center justify-between text-white">
+                                    <span className="text-sm text-gray-300">
+                                        {cart.totalDiscount > 0 ? 'جمع کل (پس از تخفیف)' : 'جمع کل'}
+                                    </span>
+                                    <span className="font-bold">{formatPrice(cart.total)}</span>
+                                </div>
+                                
+                                {selectedDeliveryMethod && (
+                                    <div className="flex items-center justify-between text-white">
+                                        <span className="text-sm text-gray-300">هزینه ارسال</span>
+                                        <span className={`font-bold ${
+                                            selectedDeliveryMethod.fee === 0 
+                                                ? 'text-green-400' 
+                                                : 'text-white'
+                                        }`}>
+                                            {selectedDeliveryMethod.fee === 0 ? 'رایگان' : formatPrice(selectedDeliveryMethod.fee)}
+                                        </span>
+                                    </div>
+                                )}
+                                
+                                {discountInfo && (
+                                    <div className="flex items-center justify-between text-green-400 text-sm">
+                                        <span>تخفیف ({discountInfo.code})</span>
+                                        <span>-{formatPrice(discountInfo.amount)}</span>
+                                    </div>
+                                )}
+                                
+                                <div className="border-t border-white/10 pt-2">
+                                    <div className="flex items-center justify-between text-white">
+                                        <span className="font-semibold">مبلغ نهایی</span>
+                                        <span className="font-extrabold text-cherry-400 text-lg">{formatPrice(finalAmount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Form Card */}
+                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-4 space-y-4">
+                            <h2 className="text-white font-bold text-lg mb-4">اطلاعات سفارش</h2>
+                            
+                            <div>
+                                <label className="block text-sm text-gray-300 mb-2">نام و نام خانوادگی</label>
+                                <input 
+                                    name="name" 
+                                    value={form.name} 
+                                    onChange={handleChange} 
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors" 
+                                    required 
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm text-gray-300 mb-2">شماره تماس</label>
+                                <input 
+                                    name="phone" 
+                                    value={form.phone} 
+                                    onChange={handleChange} 
+                                    placeholder="09123456789" 
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors" 
+                                    required 
+                                />
+                            </div>
+                            
+                            {/* Address Selection */}
+                            {authUser && addresses.length > 0 && (
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-2">انتخاب آدرس ذخیره شده</label>
+                                    <AddressDropdown
+                                        addresses={addresses}
+                                        selectedAddress={selectedAddress}
+                                        onSelect={handleAddressSelect}
+                                        onAddNew={handleAddNewAddress}
+                                        loading={addressLoading}
+                                    />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm text-gray-300 mb-2">آدرس کامل</label>
+                                <textarea 
+                                    name="address" 
+                                    value={form.address} 
+                                    onChange={handleChange} 
+                                    rows={4} 
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors resize-none" 
+                                    required 
+                                    placeholder="آدرس کامل خود را وارد کنید..."
+                                />
+                            </div>
+
+                            {/* Delivery Method Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-3">روش ارسال *</label>
+                                <div className="space-y-2">
+                                    {deliveryMethods.map((method) => (
+                                        <div 
+                                            key={method.id} 
+                                            className={`relative cursor-pointer transition-all duration-200`}
+                                            onClick={() => handleDeliveryMethodChange(method.id)}
+                                        >
+                                            <div className={`bg-white/5 rounded-xl p-3 border transition-all duration-200 ${
+                                                form.delivery_method_id === method.id
+                                                    ? 'border-cherry-500/50 bg-cherry-500/5'
+                                                    : 'border-white/10 hover:border-cherry-400/30'
+                                            }`}>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
+                                                            form.delivery_method_id === method.id
+                                                                ? 'border-cherry-500 bg-cherry-500'
+                                                                : 'border-white/40 bg-white/5'
+                                                        }`}>
+                                                            {form.delivery_method_id === method.id && (
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-white mx-auto mt-0.5"></div>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-white font-medium text-sm">{method.title}</span>
+                                                    </div>
+                                                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                                        method.fee === 0 
+                                                            ? 'text-green-400 bg-green-500/10' 
+                                                            : 'text-cherry-400 bg-cherry-500/10'
+                                                    }`}>
+                                                        {method.fee === 0 ? 'رایگان' : formatPrice(method.fee)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-gray-300 mb-2">کد تخفیف</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        name="discount_code" 
+                                        value={form.discount_code} 
+                                        onChange={handleChange} 
+                                        placeholder="کد تخفیف را وارد کنید" 
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors" 
+                                    />
+                                    <button 
+                                        type="button" 
+                                        onClick={applyDiscount} 
+                                        className="bg-gray-600 hover:bg-gray-700 text-white rounded-xl px-4 py-3 whitespace-nowrap transition-colors"
+                                    >
+                                        اعمال
+                                    </button>
+                                </div>
+                                {discountInfo && (
+                                    <div className="text-xs text-green-400 mt-2 flex items-center gap-1">
+                                        <span>✅</span>
+                                        <span>کد {discountInfo.code} اعمال شد ({formatPrice(discountInfo.amount)} تخفیف)</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <FileUpload
+                                name="receipt"
+                                value={form.receipt}
+                                onChange={(file) => handleFileChange('receipt', file)}
+                                accept="image/*"
+                                required={true}
+                                label="آپلود فیش واریزی"
+                                placeholder="فیش واریزی را انتخاب کنید"
+                                className="mt-2"
+                            />
+
+                            <button 
+                                type="submit" 
+                                onClick={handleSubmit}
+                                disabled={submitting} 
+                                className="w-full bg-gradient-to-r from-cherry-600 to-cherry-500 hover:from-cherry-500 hover:to-cherry-400 disabled:opacity-60 text-white rounded-xl px-4 py-4 font-semibold text-lg transition-all duration-200 shadow-lg"
+                            >
+                                {submitting ? 'در حال ثبت...' : 'ثبت سفارش'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Desktop Layout */}
+                    <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Summary / Invoice */}
                         <div className="lg:col-span-2">
                             <div className="bg-white/5 glass-card rounded-xl overflow-hidden soft-shadow">
@@ -173,36 +561,85 @@ function CheckoutPage() {
                                                         {item.variant_display_name && (
                                                             <div className="text-xs text-gray-300 mt-0.5">{item.variant_display_name}</div>
                                                         )}
-                                                        <div className="text-xs text-gray-400 mt-1">{item.quantity} عدد × {formatPrice(item.price)} تومان</div>
+                                                        {item.campaign && (
+                                                            <div className="text-xs text-green-400 mt-0.5 flex items-center gap-1">
+                                                                <span>🎉</span>
+                                                                <span>{item.campaign.name}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {item.original_price && item.original_price !== item.price && (
+                                                                <span className="text-xs text-gray-500 line-through">{formatPrice(item.original_price)}</span>
+                                                            )}
+                                                            <span className="text-xs text-gray-400">{item.quantity} × {formatPrice(item.price)}</span>
+                                                        </div>
                                                     </div>
+                                                    <div className="text-right">
                                                     <div className="text-white font-bold text-sm md:text-base">{formatPrice(item.total)} تومان</div>
+                                                        {item.total_discount > 0 && (
+                                                            <div className="text-xs text-green-400">صرفه‌جویی: {formatPrice(item.total_discount)}</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="p-4 space-y-1">
-                                    <div className="flex items-center justify-between text-white">
-                                        <span className="text-sm text-gray-300">جمع کل</span>
+                                <div className="p-4">
+                                    {cart.totalDiscount > 0 && (
+                                        <div className="flex items-center justify-between text-green-400 mb-2">
+                                            <span className="text-sm flex items-center gap-1">
+                                                <span>🎉</span>
+                                                <span>تخفیف کمپین</span>
+                                            </span>
+                                            <span className="font-bold">-{formatPrice(cart.totalDiscount)} تومان</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between text-white mb-1">
+                                        <span className="text-sm text-gray-300">
+                                            {cart.totalDiscount > 0 ? 'جمع کل (پس از تخفیف کمپین)' : 'جمع کل'}
+                                        </span>
                                         <span className="font-extrabold">{formatPrice(cart.total)} تومان</span>
                                     </div>
+                                    {selectedDeliveryMethod && (
+                                        <div className="flex items-center justify-between text-white mb-1">
+                                            <span className="text-sm text-gray-300">هزینه ارسال ({selectedDeliveryMethod.title})</span>
+                                            <span className={`font-bold ${
+                                                selectedDeliveryMethod.fee === 0 
+                                                    ? 'text-green-400' 
+                                                    : 'text-white'
+                                            }`}>
+                                                {selectedDeliveryMethod.fee === 0 ? 'رایگان' : `${formatPrice(selectedDeliveryMethod.fee)} تومان`}
+                                            </span>
+                                        </div>
+                                    )}
                                     {discountInfo && (
-                                        <div className="flex items-center justify-between text-green-400 text-sm">
+                                        <div className="flex items-center justify-between text-green-400 text-sm mb-1">
                                             <span>تخفیف ({discountInfo.code})</span>
                                             <span>-{formatPrice(discountInfo.amount)} تومان</span>
                                         </div>
                                     )}
-                                    {selectedDelivery && (
-                                        <div className="flex items-center justify-between text-white text-sm">
-                                            <span className="text-gray-300">هزینه ارسال ({selectedDelivery.title})</span>
-                                            <span>{deliveryFee === 0 ? 'رایگان' : `${formatPrice(deliveryFee)} تومان`}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between text-white mt-2 pt-2 border-t border-white/10">
+                                    <div className="flex items-center justify-between text-white mt-2">
                                         <span className="font-semibold">مبلغ نهایی</span>
                                         <span className="font-extrabold text-cherry-400">{formatPrice(finalAmount)} تومان</span>
                                     </div>
                                 </div>
+                                
+                                {/* Campaign Discount Summary */}
+                                {cart.totalDiscount > 0 && (
+                                    <div className="bg-green-500/10 backdrop-blur-sm rounded-xl p-4 border border-green-500/20 mx-4 mb-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-green-400 text-lg">🎉</span>
+                                                <div>
+                                                    <div className="text-green-400 font-medium text-sm">تخفیف کمپین</div>
+                                                    <div className="text-green-300 text-xs">شما از کمپین‌های فعال صرفه‌جویی کرده‌اید</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-green-400 font-bold text-lg">{formatPrice(cart.totalDiscount)} تومان</div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -217,42 +654,92 @@ function CheckoutPage() {
                                     <label className="block text-sm text-gray-300 mb-1">شماره تماس</label>
                                     <input name="phone" value={form.phone} onChange={handleChange} placeholder="09123456789" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" required />
                                 </div>
-                                <div>
-                                    <label className="block text-sm text-gray-300 mb-1">آدرس کامل</label>
-                                    <textarea name="address" value={form.address} onChange={handleChange} rows={4} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" required />
-                                </div>
+                                {/* Address Selection */}
+                                {authUser && addresses.length > 0 && (
+                                    <div>
+                                        <label className="block text-sm text-gray-300 mb-2">انتخاب آدرس ذخیره شده</label>
+                                        <AddressDropdown
+                                            addresses={addresses}
+                                            selectedAddress={selectedAddress}
+                                            onSelect={handleAddressSelect}
+                                            onAddNew={handleAddNewAddress}
+                                            loading={addressLoading}
+                                        />
+                                    </div>
+                                )}
 
                                 <div>
-                                    <label className="block text-sm text-gray-300 mb-2">نحوه ارسال</label>
-                                    <div className="space-y-2">
-                                        {deliveryMethods.map((dm) => (
-                                            <label key={dm.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${form.delivery_method_id === dm.id ? 'border-cherry-500 bg-gradient-to-r from-cherry-500/10 to-pink-500/5 ring-1 ring-cherry-500/30' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="relative flex items-center justify-center">
-                                                        <input
-                                                            type="radio"
-                                                            name="delivery_method_id"
-                                                            value={dm.id}
-                                                            checked={form.delivery_method_id === dm.id}
-                                                            onChange={(e) => {
-                                                                setForm((prev) => ({ ...prev, delivery_method_id: Number(e.target.value) }));
-                                                                setSelectedDelivery(dm);
-                                                            }}
-                                                            className="sr-only"
-                                                        />
-                                                        <div className={`w-5 h-5 rounded-full border-2 transition-all ${form.delivery_method_id === dm.id ? 'border-cherry-500' : 'border-white/30'}`}>
-                                                            <div className={`w-full h-full rounded-full transition-all ${form.delivery_method_id === dm.id ? 'bg-cherry-500 scale-[0.5]' : 'bg-transparent scale-0'}`} />
+                                    <label className="block text-sm text-gray-300 mb-1">آدرس کامل</label>
+                                    <textarea 
+                                        name="address" 
+                                        value={form.address} 
+                                        onChange={handleChange} 
+                                        rows={4} 
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" 
+                                        required 
+                                        placeholder="آدرس کامل خود را وارد کنید..."
+                                    />
+                                </div>
+
+                                {/* Delivery Method Selection */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-3">روش ارسال *</label>
+                                    <div className="space-y-3">
+                                        {deliveryMethods.map((method) => (
+                                            <div 
+                                                key={method.id} 
+                                                className={`relative cursor-pointer transition-all duration-200`}
+                                                onClick={() => handleDeliveryMethodChange(method.id)}
+                                            >
+                                                {/* Hidden Radio Input */}
+                                                <input
+                                                    type="radio"
+                                                    name="delivery_method_id"
+                                                    value={method.id}
+                                                    checked={form.delivery_method_id === method.id}
+                                                    onChange={() => {}} // Handled by onClick
+                                                    className="sr-only"
+                                                />
+                                                
+                                                {/* Card Container */}
+                                                <div className={`bg-white/5 rounded-2xl p-4 border transition-all duration-200 ${
+                                                    form.delivery_method_id === method.id
+                                                        ? 'border-cherry-500/50 bg-cherry-500/5'
+                                                        : 'border-white/10 hover:border-cherry-400/30 hover:bg-white/10'
+                                                }`}>
+                                                    <div className="flex items-start gap-3">
+                                                        {/* Radio Button */}
+                                                        <div className={`w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                                            form.delivery_method_id === method.id
+                                                                ? 'border-cherry-500 bg-cherry-500'
+                                                                : 'border-white/40 bg-white/5'
+                                                        }`}>
+                                                            {form.delivery_method_id === method.id && (
+                                                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        {/* Content */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                {/* Method Title */}
+                                                                <h3 className="text-white font-medium text-sm leading-tight">
+                                                                    {method.title}
+                                                                </h3>
+                                                                
+                                                                {/* Price Badge */}
+                                                                <span className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${
+                                                                    method.fee === 0 
+                                                                        ? 'text-green-400 bg-green-500/10' 
+                                                                        : 'text-cherry-400 bg-cherry-500/10'
+                                                                }`}>
+                                                                    {method.fee === 0 ? 'رایگان' : `${formatPrice(method.fee)} تومان`}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div>
-                                                        <div className="text-white text-sm font-medium">{dm.title}</div>
-                                                        {dm.fee === 0 && <div className="text-xs text-emerald-400">ارسال رایگان</div>}
-                                                    </div>
                                                 </div>
-                                                <span className={`text-sm font-bold ${dm.fee === 0 ? 'text-emerald-400' : 'text-cherry-400'}`}>
-                                                    {dm.fee === 0 ? 'رایگان' : `${formatPrice(dm.fee)} تومان`}
-                                                </span>
-                                            </label>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -268,58 +755,22 @@ function CheckoutPage() {
                                     )}
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm text-gray-300 mb-2">آپلود فیش واریزی (اختیاری)</label>
-                                    <div className="space-y-2">
-                                        <input 
-                                            type="file" 
-                                            accept="image/*" 
-                                            onChange={handleFileChange}
-                                            className="hidden" 
-                                            id="receipt-upload"
-                                        />
-                                        <label 
-                                            htmlFor="receipt-upload" 
-                                            className="flex items-center justify-center gap-2 w-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg px-4 py-2.5 cursor-pointer transition text-gray-300 text-sm"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            {receiptFile ? receiptFile.name : 'انتخاب فایل'}
-                                        </label>
-                                        {receiptPreview && (
-                                            <div className="relative rounded-lg overflow-hidden border border-white/10">
-                                                <img src={receiptPreview} alt="Preview" className="w-full h-auto max-h-48 object-contain bg-black/20" />
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => { setReceiptPreview(null); setReceiptFile(null); }}
-                                                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80 transition flex items-center justify-center"
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                                <FileUpload
+                                    name="receipt"
+                                    value={form.receipt}
+                                    onChange={(file) => handleFileChange('receipt', file)}
+                                    accept="image/*"
+                                    required={true}
+                                    label="آپلود فیش واریزی"
+                                    placeholder="فیش واریزی را انتخاب کنید"
+                                    className="mt-2"
+                                />
 
                                 <button type="submit" disabled={submitting} className="w-full bg-cherry-600 hover:bg-cherry-500 disabled:opacity-60 text-white rounded-lg px-4 py-2.5">
                                     {submitting ? 'در حال ثبت...' : 'ثبت سفارش'}
                                 </button>
                             </form>
                         </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Mobile sticky CTA */}
-            {!loading && cart.count > 0 && (
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/70 backdrop-blur border-t border-white/10">
-                    <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-                        <div>
-                            <div className="text-xs text-gray-300">مبلغ نهایی</div>
-                            <div className="text-white font-extrabold">{formatPrice(finalAmount)} تومان</div>
-                        </div>
-                        <button onClick={(e) => { if (!authUser) { setAuthOpen(true); return; } const formEl = document.querySelector('form'); if (formEl) formEl.requestSubmit(); }} className="flex-1 text-center bg-cherry-600 hover:bg-cherry-500 text-white rounded-lg py-2">ثبت سفارش</button>
                     </div>
                 </div>
             )}
@@ -328,9 +779,20 @@ function CheckoutPage() {
                 open={authOpen}
                 onClose={() => setAuthOpen(false)}
                 onSuccess={(user) => {
-                    setAuthUser(user);
                     setForm((prev) => ({ ...prev, name: user.name || '', phone: user.phone || '', address: user.address || '' }));
+                    setAuthOpen(false);
                 }}
+            />
+
+            <AddressModal
+                open={addressModalOpen}
+                onClose={() => {
+                    setAddressModalOpen(false);
+                    setEditingAddress(null);
+                }}
+                onSave={handleSaveAddress}
+                address={editingAddress}
+                loading={addressLoading}
             />
         </div>
     );

@@ -1,29 +1,51 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import CheckoutAuthModal from './CheckoutAuthModal';
+import SearchDropdown from './SearchDropdown';
 
 function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [cartCount, setCartCount] = useState(0);
     const navigate = useNavigate();
+    const location = useLocation();
+    const { user, logout, isAdmin } = useAuth();
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [authOpen, setAuthOpen] = useState(false);
 
-    // Get cart count from localStorage or API
+    // Check if user is in account area
+    const isInAccountArea = location.pathname.startsWith('/account');
+
+    // Get cart count from API
     React.useEffect(() => {
-        const updateFromStorage = () => {
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const count = Array.isArray(cart) ? cart.reduce((sum, it) => sum + (it.quantity || 0), 0) : 0;
-            setCartCount(count);
+        const updateFromAPI = async () => {
+            try {
+                const res = await fetch('/cart/json', { 
+                    headers: { 'Accept': 'application/json' }, 
+                    credentials: 'same-origin' 
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setCartCount(data.count || 0);
+                }
+            } catch (error) {
+                console.error('Failed to fetch cart count:', error);
+            }
         };
-        updateFromStorage();
-        const onCartUpdate = () => updateFromStorage();
+        
+        updateFromAPI();
+        const onCartUpdate = () => updateFromAPI();
         window.addEventListener('cart:update', onCartUpdate);
         return () => window.removeEventListener('cart:update', onCartUpdate);
     }, []);
+
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
     };
 
     return (
+        <>
         <header className="bg-black/50 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
@@ -49,6 +71,11 @@ function Header() {
                         </Link>
                     </nav>
 
+                    {/* Search Bar - Desktop */}
+                    <div className="hidden md:block w-80 relative" style={{ zIndex: 99999 }}>
+                        <SearchDropdown />
+                    </div>
+
                     {/* Right side items */}
                     <div className="flex items-center space-x-4">
                         {/* Cart */}
@@ -68,15 +95,47 @@ function Header() {
                             )}
                         </Link>
 
-                        {/* User Menu */}
-                        <div className="relative">
-                            <button className="flex items-center space-x-2 text-white hover:text-cherry-400 transition-colors">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                <span className="hidden sm:block">حساب کاربری</span>
-                            </button>
-                        </div>
+                        {/* User Menu - Only show when not in account area */}
+                        {!isInAccountArea && (
+                            <div className="relative">
+                                <button onClick={() => setUserMenuOpen(v=>!v)} className="flex items-center space-x-2 text-white hover:text-cherry-400 transition-colors">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    <span className="hidden sm:block">حساب کاربری</span>
+                                </button>
+                                {userMenuOpen && (
+                                    <div className="absolute left-0 mt-2 w-56 bg-[#0d0d14]/95 border border-white/10 rounded-xl shadow-2xl p-2 transform translateZ(0)" style={{ zIndex: 9999, willChange: 'transform' }}>
+                                        {user ? (
+                                            <>
+                                                <Link 
+                                                    to="/account" 
+                                                    className="block px-3 py-2 rounded hover:bg-white/5 text-sm"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                >
+                                                    پنل کاربری
+                                                </Link>
+                                                {isAdmin && (
+                                                    <Link 
+                                                        to="/admin" 
+                                                        className="block px-3 py-2 rounded hover:bg-white/5 text-sm"
+                                                        onClick={() => setUserMenuOpen(false)}
+                                                    >
+                                                        پنل ادمین
+                                                    </Link>
+                                                )}
+                                                <button onClick={async ()=>{ await logout(); setUserMenuOpen(false); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/5 text-sm text-red-300">خروج</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button onClick={()=>{ setAuthOpen(true); setUserMenuOpen(false); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/5 text-sm">ورود</button>
+                                                <button onClick={()=>{ setAuthOpen(true); setUserMenuOpen(false); }} className="w-full text-right px-3 py-2 rounded hover:bg-white/5 text-sm">ثبت‌نام</button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Mobile menu button */}
                         <button
@@ -97,6 +156,11 @@ function Header() {
                 {/* Mobile Navigation */}
                 <div className={`md:hidden absolute left-0 right-0 top-16 z-40 transition-all duration-200 ${isMenuOpen ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'}`}>
                     <div className="bg-black/80 backdrop-blur border-t border-white/10">
+                        {/* Mobile Search */}
+                        <div className="px-4 py-3 border-b border-white/10 relative" style={{ zIndex: 99999 }}>
+                            <SearchDropdown />
+                        </div>
+                        
                         <nav className="flex flex-col py-3">
                             <Link 
                                 to="/" 
@@ -131,6 +195,12 @@ function Header() {
                 </div>
             </div>
         </header>
+        <CheckoutAuthModal
+            open={authOpen}
+            onClose={() => setAuthOpen(false)}
+            onSuccess={(u)=>{ setAuthOpen(false); try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'ورود موفقیت‌آمیز بود' } })); } catch {} }}
+        />
+        </>
     );
 }
 

@@ -10,7 +10,7 @@ class DeliveryMethodController extends Controller
 {
     public function index()
     {
-        $deliveryMethods = DeliveryMethod::orderBy('sort_order')->orderBy('id')->get();
+        $deliveryMethods = DeliveryMethod::ordered()->get();
         return view('admin.delivery-methods.index', compact('deliveryMethods'));
     }
 
@@ -21,19 +21,27 @@ class DeliveryMethodController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'fee' => 'required|integer|min:0',
             'is_active' => 'boolean',
-            'sort_order' => 'integer',
+            'sort_order' => 'integer|min:0',
         ]);
 
-        $data['is_active'] = $request->boolean('is_active');
-        $data['sort_order'] = $data['sort_order'] ?? 0;
+        DeliveryMethod::create([
+            'title' => $request->title,
+            'fee' => $request->fee,
+            'is_active' => $request->boolean('is_active'),
+            'sort_order' => $request->sort_order ?? 0,
+        ]);
 
-        DeliveryMethod::create($data);
+        return redirect()->route('admin.delivery-methods.index')
+            ->with('success', 'روش ارسال با موفقیت ایجاد شد');
+    }
 
-        return redirect()->route('admin.delivery-methods.index')->with('success', 'روش ارسال ایجاد شد');
+    public function show(DeliveryMethod $deliveryMethod)
+    {
+        return view('admin.delivery-methods.show', compact('deliveryMethod'));
     }
 
     public function edit(DeliveryMethod $deliveryMethod)
@@ -43,29 +51,35 @@ class DeliveryMethodController extends Controller
 
     public function update(Request $request, DeliveryMethod $deliveryMethod)
     {
-        $data = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'fee' => 'required|integer|min:0',
             'is_active' => 'boolean',
-            'sort_order' => 'integer',
+            'sort_order' => 'integer|min:0',
         ]);
 
-        $data['is_active'] = $request->boolean('is_active');
+        $deliveryMethod->update([
+            'title' => $request->title,
+            'fee' => $request->fee,
+            'is_active' => $request->boolean('is_active'),
+            'sort_order' => $request->sort_order ?? 0,
+        ]);
 
-        $deliveryMethod->update($data);
-
-        return redirect()->route('admin.delivery-methods.index')->with('success', 'روش ارسال به‌روزرسانی شد');
+        return redirect()->route('admin.delivery-methods.index')
+            ->with('success', 'روش ارسال با موفقیت به‌روزرسانی شد');
     }
 
     public function destroy(DeliveryMethod $deliveryMethod)
     {
-        $deliveryMethod->delete();
-        return redirect()->route('admin.delivery-methods.index')->with('success', 'روش ارسال حذف شد');
-    }
+        // Check if delivery method is used in any orders
+        if ($deliveryMethod->orders()->exists()) {
+            return redirect()->route('admin.delivery-methods.index')
+                ->with('error', 'این روش ارسال در سفارشات استفاده شده و قابل حذف نیست');
+        }
 
-    public function toggleStatus(DeliveryMethod $deliveryMethod)
-    {
-        $deliveryMethod->update(['is_active' => !$deliveryMethod->is_active]);
-        return back()->with('success', 'وضعیت به‌روزرسانی شد');
+        $deliveryMethod->delete();
+
+        return redirect()->route('admin.delivery-methods.index')
+            ->with('success', 'روش ارسال با موفقیت حذف شد');
     }
 }

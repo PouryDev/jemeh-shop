@@ -17,14 +17,14 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string',
+            'username' => 'required|string', // Can be instagram_id or phone
             'password' => 'required|string',
         ]);
 
         // Find user by instagram_id or phone
         $user = User::where('instagram_id', $request->username)
-            ->orWhere('phone', $request->username)
-            ->first();
+                   ->orWhere('phone', $request->username)
+                   ->first();
 
         // Check if user exists and password is correct
         if ($user && Hash::check($request->password, $user->password)) {
@@ -41,14 +41,16 @@ class AuthController extends Controller
             return redirect()->intended('/');
         }
 
+        $errorMessage = 'آیدی اینستاگرام، شماره تلفن یا رمز عبور نادرست است.';
+        
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'message' => 'اطلاعات وارد شده صحیح نیست.'
-            ], 401);
+                'message' => $errorMessage
+            ], 422);
         }
 
-        return back()->withErrors(['username' => 'شماره تلفن یا آیدی اینستاگرام یا رمز عبور نادرست است.'])->onlyInput('username');
+        return back()->withErrors(['username' => $errorMessage])->onlyInput('username');
     }
 
     public function showRegister()
@@ -61,7 +63,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'instagram_id' => 'required|string|max:255|unique:users,instagram_id',
-            'phone' => 'required|string|max:20|unique:users,phone',
+            'phone' => 'required|string|max:255|unique:users,phone',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
@@ -73,7 +75,6 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
-        $request->session()->regenerate();
         
         if ($request->expectsJson()) {
             return response()->json([

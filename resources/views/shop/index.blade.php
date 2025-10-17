@@ -1,16 +1,8 @@
 <x-layouts.app :title="'جمه‌شاپ - اکسسوری‌های خاص و ترند'">
-    <!-- Hero Section -->
-    <section class="rounded-xl border border-white/10 p-4 md:p-6 bg-gradient-to-br from-white/5 to-white/0">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-extrabold">جمه به مازنی یعنی لباس</h1>
-                <p class="text-sm text-gray-300 mt-1">استایل مینیمال با عطر شمال</p>
-            </div>
-            <form class="w-full md:w-80" id="search-form">
-                <input name="q" value="{{ request('q') }}" placeholder="جستجوی محصول، مثل: دستبند نقره" class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cherry-600" id="search-input" />
-            </form>
-        </div>
-    </section>
+    <!-- Simple Search -->
+    <form class="w-full" id="search-form">
+        <input name="q" value="{{ request('q') }}" placeholder="جستجوی محصول" class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cherry-600" id="search-input" />
+    </form>
 
     <!-- Campaigns Section -->
     @if($activeCampaigns->count() > 0)

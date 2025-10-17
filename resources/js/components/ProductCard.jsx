@@ -1,32 +1,38 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import ProductModal from './ProductModal';
+import { apiRequest } from '../utils/csrfToken';
 
 function ProductCard({ product, index }) {
     const [isHovered, setIsHovered] = useState(false);
-    const navigate = useNavigate();
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [qtyInCart, setQtyInCart] = useState(0);
 
     const handleCardClick = () => {
-        navigate(`/product/${product.slug}`);
+        setIsModalOpen(true);
     };
 
     function formatPriceFa(value) {
         try { return Number(value || 0).toLocaleString('fa-IR'); } catch { return value; }
     }
 
-    const refreshQtyFromStorage = () => {
+    const refreshQtyFromAPI = async () => {
         try {
-            const items = JSON.parse(localStorage.getItem('cart') || '[]');
-            const qty = Array.isArray(items) ? items.filter(it => String(it.id) === String(product.id)).reduce((s, it) => s + (it.quantity || 0), 0) : 0;
-            setQtyInCart(qty);
-        } catch {
+            const response = await apiRequest('/cart/json');
+            if (response.ok) {
+                const data = await response.json();
+                const items = data.items || [];
+                const qty = items.filter(it => String(it.id) === String(product.id)).reduce((s, it) => s + (it.quantity || 0), 0);
+                setQtyInCart(qty);
+            }
+        } catch (error) {
+            console.error('Failed to fetch cart quantity:', error);
             setQtyInCart(0);
         }
     };
 
     React.useEffect(() => {
-        refreshQtyFromStorage();
-        const onCartUpdate = () => refreshQtyFromStorage();
+        refreshQtyFromAPI();
+        const onCartUpdate = () => refreshQtyFromAPI();
         window.addEventListener('cart:update', onCartUpdate);
         return () => window.removeEventListener('cart:update', onCartUpdate);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -35,24 +41,19 @@ function ProductCard({ product, index }) {
     const increment = async (e) => {
         e.stopPropagation();
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const response = await fetch(`/cart/add/${product.slug}`, {
+            const response = await apiRequest(`/cart/add/${product.slug}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token
+                    'Content-Type': 'application/json'
                 },
-                credentials: 'same-origin',
                 body: JSON.stringify({ quantity: 1 })
             });
             if (!response.ok) throw new Error('failed');
             const data = await response.json();
             if (data && data.ok) {
-                try { localStorage.setItem('cart', JSON.stringify(data.items || [])); } catch {}
                 window.dispatchEvent(new Event('cart:update'));
                 window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'به سبد اضافه شد' } }));
-                refreshQtyFromStorage();
+                refreshQtyFromAPI();
             }
         } catch (err) {
             console.error(err);
@@ -63,37 +64,32 @@ function ProductCard({ product, index }) {
         e.stopPropagation();
         try {
             // Fetch current cart to identify exact cart_key and quantity
-            const summary = await fetch('/cart/json', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+            const summary = await apiRequest('/cart/json');
             if (!summary.ok) throw new Error('failed');
             const payload = await summary.json();
             const items = payload.items || [];
             const target = items.find((it) => String(it.id) === String(product.id));
             if (!target) return; // nothing to do
 
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             // Remove the current key completely
-            const removeRes = await fetch(`/cart/remove/${encodeURIComponent(target.cart_key)}`, {
-                method: 'DELETE',
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
-                credentials: 'same-origin'
+            const removeRes = await apiRequest(`/cart/remove/${encodeURIComponent(target.cart_key)}`, {
+                method: 'DELETE'
             });
             if (!removeRes.ok) throw new Error('failed');
             let state = await removeRes.json();
             // Re-add with quantity - 1 if still >= 1
             if ((target.quantity || 0) - 1 > 0) {
-                const addRes = await fetch(`/cart/add/${product.slug}`, {
+                const addRes = await apiRequest(`/cart/add/${product.slug}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
-                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ quantity: (target.quantity - 1) })
                 });
                 if (!addRes.ok) throw new Error('failed');
                 state = await addRes.json();
             }
             if (state && state.ok) {
-                try { localStorage.setItem('cart', JSON.stringify(state.items || [])); } catch {}
                 window.dispatchEvent(new Event('cart:update'));
-                refreshQtyFromStorage();
+                refreshQtyFromAPI();
             }
         } catch (err) {
             console.error(err);
@@ -101,19 +97,20 @@ function ProductCard({ product, index }) {
     };
 
     return (
-        <div
-            className={`product-card group relative rounded-2xl overflow-hidden border border-white/10 bg-white/5 glass-card hover-lift soft-shadow opacity-0 translate-y-4 transition-all duration-500 ease-out ${
-                isHovered ? 'border-cherry-500/30' : ''
-            }`}
-            style={{ 
-                animationDelay: `${index * 100}ms`,
-                opacity: 1,
-                transform: 'translateY(0)'
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleCardClick}
-        >
+        <>
+            <div
+                className={`product-card group relative rounded-2xl overflow-hidden border border-white/10 bg-white/5 glass-card hover-lift soft-shadow opacity-0 translate-y-4 transition-all duration-500 ease-out ${
+                    isHovered ? 'border-cherry-500/30' : ''
+                }`}
+                style={{ 
+                    animationDelay: `${index * 100}ms`,
+                    opacity: 1,
+                    transform: 'translateY(0)'
+                }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                onClick={handleCardClick}
+            >
             {/* Campaign Badge */}
             {product.campaigns && product.campaigns.length > 0 && (
                 <div className="absolute top-2 left-2 z-20">
@@ -171,7 +168,15 @@ function ProductCard({ product, index }) {
             </div>
 
             {/* Qty Controls moved into image overlay to avoid overlapping price on mobile */}
-        </div>
+            </div>
+            
+            {/* Product Modal */}
+            <ProductModal 
+                product={product} 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+            />
+        </>
     );
 }
 

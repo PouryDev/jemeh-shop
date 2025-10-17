@@ -58,6 +58,9 @@ class ProductController extends Controller
     {
         $product->load(['images', 'activeVariants.color', 'activeVariants.size', 'campaigns']);
         
+        // Add available_colors and available_sizes attributes
+        $product->setAppends(['available_colors', 'available_sizes', 'total_stock']);
+        
         return response()->json([
             'success' => true,
             'data' => $product

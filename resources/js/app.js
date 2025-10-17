@@ -37,7 +37,16 @@ document.addEventListener('click', async (e) => {
 
 function updateCartUI(payload){
   const badge = document.querySelector('[data-cart-count]');
-  if (badge) badge.textContent = payload.count || '';
+  if (badge) {
+    const count = Number(payload.count) || 0;
+    badge.textContent = count > 0 ? String(count) : '';
+    // Hide badge entirely if zero
+    if (count === 0) {
+      badge.classList.add('hidden');
+    } else {
+      badge.classList.remove('hidden');
+    }
+  }
   const dropdown = document.getElementById('cartDropdownList');
   if (dropdown) {
     dropdown.innerHTML = '';
@@ -60,6 +69,15 @@ function updateCartUI(payload){
 
 // Initialize cart dropdown on load
 window.addEventListener('DOMContentLoaded', async ()=>{
+  try {
+    const res = await fetch('/cart/json', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    const data = await res.json();
+    updateCartUI(data);
+  } catch {}
+});
+
+// Listen for cart updates from React components
+window.addEventListener('cart:update', async ()=>{
   try {
     const res = await fetch('/cart/json', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
     const data = await res.json();

@@ -16,6 +16,8 @@ class ProductImage extends Model
         'sort_order',
     ];
 
+    protected $appends = ['url'];
+
     public function getUrlAttribute(): string
     {
         // Support external URLs used by seeder or local storage paths

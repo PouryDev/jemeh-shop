@@ -12,7 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Register global middleware to convert Persian numbers to English
+        $middleware->web(append: [
+            \App\Http\Middleware\ConvertPersianNumbers::class,
+        ]);
+        
+        $middleware->api(append: [
+            \App\Http\Middleware\ConvertPersianNumbers::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

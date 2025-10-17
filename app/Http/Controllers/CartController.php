@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\CampaignService;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
@@ -52,6 +53,7 @@ class CartController extends Controller
         $cart = $request->session()->get('cart', []);
         $count = array_sum($cart);
         $items = [];
+        $campaignService = new CampaignService();
         
         foreach ($cart as $cartKey => $qty) {
             // Parse cart key to get product ID and variant info
@@ -64,6 +66,9 @@ class CartController extends Controller
             if ($product) {
                 $variantDisplayName = null;
                 $unitPrice = $product->price;
+                $originalPrice = $product->price;
+                $campaignDiscount = 0;
+                $campaign = null;
                 
                 // Find variant info if exists
                 if ($colorId || $sizeId) {
@@ -78,8 +83,20 @@ class CartController extends Controller
                     
                     if ($productVariant) {
                         $variantDisplayName = $productVariant->display_name;
-                        $unitPrice = $productVariant->price ?? $product->price;
+                        $originalPrice = $productVariant->price ?? $product->price;
+                        
+                        // Calculate campaign discount for variant
+                        $campaignData = $campaignService->calculateVariantPrice($productVariant);
+                        $unitPrice = $campaignData['campaign_price'];
+                        $campaignDiscount = $campaignData['discount_amount'];
+                        $campaign = $campaignData['campaign'];
                     }
+                } else {
+                    // Calculate campaign discount for product
+                    $campaignData = $campaignService->calculateProductPrice($product);
+                    $unitPrice = $campaignData['campaign_price'];
+                    $campaignDiscount = $campaignData['discount_amount'];
+                    $campaign = $campaignData['campaign'];
                 }
                 
                 $items[] = [
@@ -88,15 +105,34 @@ class CartController extends Controller
                     'slug' => $product->slug,
                     'title' => $product->title,
                     'variant_display_name' => $variantDisplayName,
+                    'original_price' => $originalPrice,
                     'price' => $unitPrice,
+                    'campaign_discount' => $campaignDiscount,
+                    'campaign' => $campaign ? [
+                        'id' => $campaign->id,
+                        'name' => $campaign->name,
+                        'discount_type' => $campaign->discount_type,
+                        'discount_value' => $campaign->discount_value,
+                    ] : null,
                     'quantity' => $qty,
                     'total' => $unitPrice * $qty,
+                    'total_discount' => $campaignDiscount * $qty,
                 ];
             }
         }
         
         $total = array_sum(array_column($items, 'total'));
-        return ['ok' => true, 'count' => $count, 'items' => $items, 'total' => $total];
+        $totalDiscount = array_sum(array_column($items, 'total_discount'));
+        $originalTotal = $total + $totalDiscount;
+        
+        return [
+            'ok' => true, 
+            'count' => $count, 
+            'items' => $items, 
+            'total' => $total,
+            'original_total' => $originalTotal,
+            'total_discount' => $totalDiscount,
+        ];
     }
 
     public function summary(Request $request)

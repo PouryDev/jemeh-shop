@@ -21,12 +21,13 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . auth()->id(),
             'phone' => 'nullable|string|max:20',
+            'instagram_id' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:users,email,' . auth()->id(),
         ]);
 
         $user = auth()->user();
-        $user->update($request->only(['name', 'email', 'phone']));
+        $user->update($request->only(['name', 'phone', 'instagram_id', 'email']));
 
         return response()->json([
             'success' => true,
@@ -49,6 +50,31 @@ class UserController extends Controller
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
                 'total' => $orders->total()
+            ]
+        ]);
+    }
+
+    public function stats()
+    {
+        $user = auth()->user();
+        
+        // Total orders count
+        $totalOrders = $user->orders()->count();
+        
+        // Total amount spent
+        $totalAmount = $user->orders()
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+        
+        // Total addresses count
+        $totalAddresses = $user->addresses()->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_orders' => $totalOrders,
+                'total_amount' => $totalAmount,
+                'total_addresses' => $totalAddresses
             ]
         ]);
     }

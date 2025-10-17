@@ -7,7 +7,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\DeliveryMethod;
 use App\Services\DiscountCodeService;
 use App\Services\CampaignService;
 use Illuminate\Http\Request;
@@ -19,11 +18,13 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $cart = $request->session()->get('cart', []);
-        $products = Product::query()->whereIn('id', array_keys($cart))->get()->keyBy('id');
-        $total = 0;
-        foreach ($cart as $productId => $qty) {
-            $total += ($products[$productId]->price ?? 0) * $qty;
-        }
+        $campaignService = new CampaignService();
+        
+        // Calculate cart totals with campaign discounts
+        $cartData = $this->calculateCartTotals($request, $campaignService);
+        $total = $cartData['total'];
+        $originalTotal = $cartData['original_total'];
+        $campaignDiscount = $cartData['campaign_discount'];
         
         // Handle discount code validation
         $discountCode = null;
@@ -54,13 +55,73 @@ class CheckoutController extends Controller
         
         return view('shop.checkout', compact(
             'cart', 
-            'products', 
             'total', 
+            'originalTotal',
+            'campaignDiscount',
             'discountCode', 
             'discountAmount', 
             'finalAmount',
             'discountCodeError'
         ));
+    }
+
+    private function calculateCartTotals(Request $request, CampaignService $campaignService): array
+    {
+        $cart = $request->session()->get('cart', []);
+        $total = 0;
+        $originalTotal = 0;
+        $campaignDiscount = 0;
+        
+        foreach ($cart as $cartKey => $qty) {
+            // Parse cart key to get product ID and variant info
+            $parts = explode('_', $cartKey);
+            $productId = $parts[0];
+            $colorId = isset($parts[1]) && $parts[1] !== '0' ? $parts[1] : null;
+            $sizeId = isset($parts[2]) && $parts[2] !== '0' ? $parts[2] : null;
+            
+            $product = Product::find($productId);
+            if ($product) {
+                $unitPrice = $product->price;
+                $originalPrice = $product->price;
+                $itemCampaignDiscount = 0;
+                
+                // Find variant info if exists
+                if ($colorId || $sizeId) {
+                    $productVariant = ProductVariant::where('product_id', $productId)
+                        ->when($colorId, function ($query) use ($colorId) {
+                            $query->where('color_id', $colorId);
+                        })
+                        ->when($sizeId, function ($query) use ($sizeId) {
+                            $query->where('size_id', $sizeId);
+                        })
+                        ->first();
+                    
+                    if ($productVariant) {
+                        $originalPrice = $productVariant->price ?? $product->price;
+                        
+                        // Calculate campaign discount for variant
+                        $campaignData = $campaignService->calculateVariantPrice($productVariant);
+                        $unitPrice = $campaignData['campaign_price'];
+                        $itemCampaignDiscount = $campaignData['discount_amount'];
+                    }
+                } else {
+                    // Calculate campaign discount for product
+                    $campaignData = $campaignService->calculateProductPrice($product);
+                    $unitPrice = $campaignData['campaign_price'];
+                    $itemCampaignDiscount = $campaignData['discount_amount'];
+                }
+                
+                $originalTotal += $originalPrice * $qty;
+                $total += $unitPrice * $qty;
+                $campaignDiscount += $itemCampaignDiscount * $qty;
+            }
+        }
+        
+        return [
+            'total' => $total,
+            'original_total' => $originalTotal,
+            'campaign_discount' => $campaignDiscount,
+        ];
     }
 
     public function place(Request $request)
@@ -69,8 +130,8 @@ class CheckoutController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:50',
             'customer_address' => 'required|string|max:1000',
+            'receipt' => 'required|image|max:4096',
             'delivery_method_id' => 'required|exists:delivery_methods,id',
-            'receipt' => 'nullable|image|max:4096',
             'discount_code' => 'nullable|string|max:50',
         ]);
 
@@ -79,15 +140,17 @@ class CheckoutController extends Controller
             return redirect()->route('shop.index');
         }
 
-        // Get delivery method
-        $deliveryMethod = DeliveryMethod::findOrFail($data['delivery_method_id']);
-        $deliveryFee = $deliveryMethod->fee;
+        $campaignService = new CampaignService();
+        
+        // Calculate cart totals with campaign discounts
+        $cartData = $this->calculateCartTotals($request, $campaignService);
+        $total = $cartData['total'];
+        $originalTotal = $cartData['original_total'];
+        $campaignDiscount = $cartData['campaign_discount'];
 
-        $products = Product::query()->whereIn('id', array_keys($cart))->get()->keyBy('id');
-        $total = 0;
-        foreach ($cart as $productId => $qty) {
-            $total += ($products[$productId]->price ?? 0) * $qty;
-        }
+        // Get delivery method and calculate delivery fee
+        $deliveryMethod = \App\Models\DeliveryMethod::findOrFail($data['delivery_method_id']);
+        $deliveryFee = $deliveryMethod->fee;
 
         // Handle discount code
         $discountAmount = 0;
@@ -97,7 +160,7 @@ class CheckoutController extends Controller
             $result = $discountService->applyDiscountCode(
                 $data['discount_code'],
                 $request->user(),
-                $total
+                $total + $deliveryFee  // Include delivery fee in discount calculation
             );
             
             if ($result['success']) {
@@ -108,7 +171,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $finalAmount = $total - $discountAmount + $deliveryFee;
+        $finalAmount = $total + $deliveryFee - $discountAmount;
 
         $receiptPath = null;
         if ($request->hasFile('receipt')) {
@@ -117,11 +180,14 @@ class CheckoutController extends Controller
 
         $order = Order::create([
             'user_id' => $request->user() ? $request->user()->id : null,
-            'delivery_method_id' => $data['delivery_method_id'],
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
             'customer_address' => $data['customer_address'],
             'total_amount' => $total,
+            'original_amount' => $originalTotal,
+            'campaign_discount_amount' => $campaignDiscount,
+            'delivery_method_id' => $deliveryMethod->id,
+            'delivery_address_id' => $data['delivery_address_id'] ?? null,
             'delivery_fee' => $deliveryFee,
             'discount_code' => $data['discount_code'] ?? null,
             'discount_amount' => $discountAmount,
@@ -137,7 +203,7 @@ class CheckoutController extends Controller
             $colorId = isset($parts[1]) && $parts[1] !== '0' ? $parts[1] : null;
             $sizeId = isset($parts[2]) && $parts[2] !== '0' ? $parts[2] : null;
             
-            $product = $products[$productId];
+            $product = Product::find($productId);
             
             // Find the variant if color/size is specified
             $productVariant = null;
@@ -209,12 +275,34 @@ class CheckoutController extends Controller
             'order_id' => $order->id,
             'invoice_number' => 'INV-'.Str::upper(Str::random(8)),
             'amount' => $finalAmount,
-            'delivery_fee' => $deliveryFee,
+            'original_amount' => $originalTotal + $deliveryFee,
+            'campaign_discount_amount' => $campaignDiscount,
+            'discount_code_amount' => $discountAmount,
             'currency' => 'IRR',
             'status' => 'unpaid',
         ]);
 
         $request->session()->forget('cart');
+        
+        // Check if this is an API request (from React)
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'سفارش با موفقیت ثبت شد',
+                'invoice' => [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'amount' => $invoice->amount,
+                    'status' => $invoice->status,
+                ],
+                'order' => [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                ]
+            ]);
+        }
+        
+        // For non-API requests, redirect to React SPA
         return redirect()->route('checkout.thanks', $invoice);
     }
 

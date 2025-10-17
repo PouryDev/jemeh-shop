@@ -14,11 +14,14 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
-        'delivery_method_id',
         'customer_name',
         'customer_phone',
         'customer_address',
         'total_amount',
+        'original_amount',
+        'campaign_discount_amount',
+        'delivery_method_id',
+        'delivery_address_id',
         'delivery_fee',
         'discount_code',
         'discount_amount',
@@ -35,6 +38,11 @@ class Order extends Model
     public function deliveryMethod(): BelongsTo
     {
         return $this->belongsTo(DeliveryMethod::class);
+    }
+
+    public function deliveryAddress(): BelongsTo
+    {
+        return $this->belongsTo(Address::class, 'delivery_address_id');
     }
 
     public function items(): HasMany
@@ -61,5 +69,3 @@ class Order extends Model
         return DiscountCode::where('code', $this->discount_code)->first();
     }
 }
-
-

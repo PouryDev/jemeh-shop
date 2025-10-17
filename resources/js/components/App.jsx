@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '../contexts/AuthContext';
+import CsrfRefresher from './CsrfRefresher';
 import ShopPage from './ShopPage';
 import ProductPage from './ProductPage';
 import CartPage from './CartPage';
 import CheckoutPage from './CheckoutPage';
 import AdminLayout from './admin/AdminLayout';
 import AdminDashboard from './admin/AdminDashboard';
-import AdminProducts from './admin/AdminProducts';
-import AdminOrders from './admin/AdminOrders';
-import AdminCampaigns from './admin/AdminCampaigns';
-import AdminDiscountCodes from './admin/AdminDiscountCodes';
-import AdminCategories from './admin/AdminCategories';
-import AdminProductVariants from './admin/AdminProductVariants';
-import AdminUsers from './admin/AdminUsers';
-import AdminReports from './admin/AdminReports';
+import AdminProductManagement from './admin/AdminProductManagement';
+import AdminProductForm from './admin/AdminProductForm';
+import AdminOrderManagement from './admin/AdminOrderManagement';
+import AdminOrderDetail from './admin/AdminOrderDetail';
+import AdminDeliveryManagement from './admin/AdminDeliveryManagement';
+import AdminCampaignManagement from './admin/AdminCampaignManagement';
+import AdminCampaignForm from './admin/AdminCampaignForm';
+import AdminDiscountManagement from './admin/AdminDiscountManagement';
+import AdminDiscountForm from './admin/AdminDiscountForm';
 import AccountLayout from './account/AccountLayout';
 import AccountProfile from './account/AccountProfile';
 import AccountOrders from './account/AccountOrders';
@@ -22,20 +25,23 @@ import LoginPage from './auth/LoginPage';
 import RegisterPage from './auth/RegisterPage';
 import Layout from './Layout';
 import NotFound from './NotFound';
+import CategoryPage from './CategoryPage';
+import CategoriesPage from './CategoriesPage';
 import ThanksPage from './ThanksPage';
-import TopLoadingBar from './TopLoadingBar';
-import ScrollToTop from './ScrollToTop';
 
 function App() {
     return (
-        <Router>
-            <ScrollToTop />
-            <TopLoadingBar />
-            <Layout>
-                <Routes>
+        <AuthProvider>
+            <CsrfRefresher />
+            <Router>
+                <Layout>
+                    <Routes>
                     {/* Shop Routes */}
                     <Route path="/" element={<ShopPage />} />
+                    <Route path="/products" element={<ShopPage />} />
                     <Route path="/product/:slug" element={<ProductPage />} />
+                    <Route path="/category/:id" element={<CategoryPage />} />
+                    <Route path="/categories" element={<CategoriesPage />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
@@ -48,6 +54,7 @@ function App() {
                     {/* Account Routes */}
                     <Route path="/account" element={<AccountLayout />}>
                         <Route index element={<AccountProfile />} />
+                        <Route path="profile" element={<AccountProfile />} />
                         <Route path="orders" element={<AccountOrders />} />
                         <Route path="addresses" element={<AccountAddresses />} />
                     </Route>
@@ -55,18 +62,23 @@ function App() {
                     {/* Admin Routes */}
                     <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<AdminDashboard />} />
-                        <Route path="products" element={<AdminProducts />} />
-                        <Route path="orders" element={<AdminOrders />} />
-                        <Route path="campaigns" element={<AdminCampaigns />} />
-                        <Route path="discount-codes" element={<AdminDiscountCodes />} />
-                        <Route path="categories" element={<AdminCategories />} />
-                        <Route path="product-variants" element={<AdminProductVariants />} />
-                        <Route path="users" element={<AdminUsers />} />
-                        <Route path="reports" element={<AdminReports />} />
+                        <Route path="products" element={<AdminProductManagement />} />
+                        <Route path="products/create" element={<AdminProductForm />} />
+                        <Route path="products/:id/edit" element={<AdminProductForm />} />
+                        <Route path="orders" element={<AdminOrderManagement />} />
+                        <Route path="orders/:id" element={<AdminOrderDetail />} />
+                        <Route path="delivery" element={<AdminDeliveryManagement />} />
+                        <Route path="campaigns" element={<AdminCampaignManagement />} />
+                        <Route path="campaigns/create" element={<AdminCampaignForm />} />
+                        <Route path="campaigns/:id/edit" element={<AdminCampaignForm />} />
+                        <Route path="discounts" element={<AdminDiscountManagement />} />
+                        <Route path="discounts/create" element={<AdminDiscountForm />} />
+                        <Route path="discounts/:id/edit" element={<AdminDiscountForm />} />
                     </Route>
                 </Routes>
             </Layout>
         </Router>
+        </AuthProvider>
     );
 }
 

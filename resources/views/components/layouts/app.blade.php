@@ -5,8 +5,45 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ $title ?? 'جمه‌شاپ' }}</title>
+        
+        <!-- PWA Meta Tags -->
+        <meta name="application-name" content="جمه شاپ">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="جمه شاپ">
+        <meta name="description" content="فروشگاه آنلاین جمه شاپ - جدیدترین محصولات مد و پوشاک با بهترین قیمت">
+        <meta name="format-detection" content="telephone=no">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="msapplication-config" content="/browserconfig.xml">
+        <meta name="msapplication-TileColor" content="#dc2626">
+        <meta name="msapplication-tap-highlight" content="no">
+        <meta name="theme-color" content="#dc2626">
+        
+        <!-- Icons -->
         <link rel="icon" type="image/png" href="{{ asset('favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logo.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logo.png') }}">
+        <link rel="apple-touch-icon" sizes="167x167" href="{{ asset('images/logo.png') }}">
+        
+        <!-- Manifest -->
+        <link rel="manifest" href="{{ asset('manifest.json') }}">
+        
+        <!-- Service Worker Registration -->
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then((registration) => {
+                            console.log('SW registered: ', registration);
+                        })
+                        .catch((registrationError) => {
+                            console.log('SW registration failed: ', registrationError);
+                        });
+                });
+            }
+        </script>
+        
         @if (file_exists(public_path('build/manifest.json')) || (app()->environment('local') && file_exists(public_path('hot'))))
             @vite(['resources/css/app.css','resources/js/app.js'])
         @endif
@@ -25,7 +62,7 @@
             input[type=number]::-webkit-outer-spin-button,
             input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
             /* Firefox */
-            input[type=number] { -moz-appearance: textfield; }
+            input[type=number] { -moz-appearance: textfield; appearance: textfield; }
         </style>
     </head>
     <body class="min-h-screen bg-[#0b0b0f] text-white">
@@ -45,7 +82,7 @@
                             <span class="sr-only">سبد خرید</span>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5"><path fill="currentColor" d="M8 22q-.825 0-1.412-.587T6 20q0-.825.588-1.412T8 18q.825 0 1.413.588T10 20q0 .825-.587 1.413T8 22m8 0q-.825 0-1.412-.587T14 20q0-.825.588-1.412T16 18q.825 0 1.413.588T18 20q0 .825-.587 1.413T16 22M6.2 6l2.8 6h6.825q.15 0 .275-.075t.2-.2l2.8-5.05q.125-.225.012-.45T18.7 6zM5.225 4h13.65q.575 0 .863.462t.037.963l-3.05 5.6q-.275.5-.763.787T14.8 12H8.45l-1.1 2H18v2H8q-.775 0-1.15-.662T6.9 14.8l.35-.8L3 4H1V2h3.05z"/></svg>
                             @php $count = array_sum(session('cart', [])); @endphp
-                            <span data-cart-count class="absolute -top-2 -left-3 text-[10px] bg-cherry-600 rounded-full px-1.5 py-0.5">{{ $count ?: '' }}</span>
+                            <span data-cart-count class="absolute -top-2 -left-3 text-[10px] bg-cherry-600 rounded-full px-1.5 py-0.5 {{ $count ? '' : 'hidden' }}">{{ $count ?: '' }}</span>
                         </button>
                         <div id="cartDropdown" class="hidden absolute left-1/2 -translate-x-1/2 mt-2 w-72 max-h-80 overflow-auto rounded-xl border border-white/10 bg-[#0d0d14]/95 shadow-2xl">
                             <div id="cartDropdownList" class="py-2"></div>
@@ -109,8 +146,8 @@
                 </div>
                 <div class="mt-4 pt-4 border-t border-white/10 space-y-1">
                     @auth
-                        <a href="{{ route('account.orders') }}" class="block px-3 py-2 rounded hover:bg-white/5">سفارش‌های من</a>
-                        <a href="{{ route('account.index') }}" class="block px-3 py-2 rounded hover:bg-white/5">داشبورد</a>
+                        <a href="/account/orders" class="block px-3 py-2 rounded hover:bg-white/5">سفارش‌های من</a>
+                        <a href="/account" class="block px-3 py-2 rounded hover:bg-white/5">داشبورد</a>
                         <form method="post" action="{{ route('auth.logout') }}" class="px-3 py-2">
                             @csrf
                             <button class="w-full text-left rounded hover:bg-white/5">خروج</button>
