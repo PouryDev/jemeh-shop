@@ -70,15 +70,15 @@ echo "✅ .env.docker file created successfully!"
 
 # Stop and remove existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose down
+docker compose down
 
 # Remove old images to force rebuild
 echo "🗑️ Removing old images..."
-docker-compose down --rmi all
+docker compose down --rmi all
 
 # Build and start containers
 echo "🚀 Building and starting containers..."
-docker-compose up -d --build
+docker compose up -d --build
 
 # Wait for containers to be ready
 echo "⏳ Waiting for containers to be ready..."
@@ -86,12 +86,12 @@ sleep 10
 
 # Generate APP_KEY inside the container
 echo "🔑 Generating APP_KEY..."
-docker-compose exec php php artisan key:generate --force --no-interaction
+docker compose exec php php artisan key:generate --force --no-interaction
 
 # Run migrations
 echo "📊 Running migrations..."
-docker-compose exec php php artisan migrate --force --no-interaction
+docker compose exec php php artisan migrate --force --no-interaction
 
 echo "🎉 Setup completed successfully!"
 echo "🌐 Your application is available at: http://localhost"
-echo "📝 To view logs: docker-compose logs -f php"
+echo "📝 To view logs: docker compose logs -f php"

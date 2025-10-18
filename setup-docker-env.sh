@@ -65,4 +65,4 @@ VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 EOF
 
 echo "✅ .env.docker file created successfully!"
-echo "📝 You can now run: docker-compose up -d --build"
+echo "📝 You can now run: docker compose up -d --build"

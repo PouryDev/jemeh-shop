@@ -11,18 +11,18 @@
 2. **Build and Run:**
 
     ```bash
-    docker-compose up -d --build
+    docker compose up -d --build
     ```
 
 3. **Run Migrations:**
 
     ```bash
-    docker-compose exec php php artisan migrate
+    docker compose exec php php artisan migrate
     ```
 
 4. **Seed Database (Optional):**
     ```bash
-    docker-compose exec php php artisan db:seed
+    docker compose exec php php artisan db:seed
     ```
 
 ## Environment Configuration
@@ -55,8 +55,8 @@ If you get environment sync errors:
 
 2. Rebuild containers:
     ```bash
-    docker-compose down
-    docker-compose up -d --build
+    docker compose down
+    docker compose up -d --build
     ```
 
 ### Database Connection Issues
@@ -66,18 +66,18 @@ If database connection fails:
 1. Check if database container is running:
 
     ```bash
-    docker-compose ps
+    docker compose ps
     ```
 
 2. Check database logs:
 
     ```bash
-    docker-compose logs db
+    docker compose logs db
     ```
 
 3. Restart database:
     ```bash
-    docker-compose restart db
+    docker compose restart db
     ```
 
 ### Permission Issues
@@ -86,30 +86,30 @@ If you get permission errors:
 
 1. Fix storage permissions:
     ```bash
-    docker-compose exec php chown -R www-data:www-data storage bootstrap/cache
-    docker-compose exec php chmod -R 775 storage bootstrap/cache
+    docker compose exec php chown -R www-data:www-data storage bootstrap/cache
+    docker compose exec php chmod -R 775 storage bootstrap/cache
     ```
 
 ## Development Commands
 
 ```bash
 # View logs
-docker-compose logs -f php
+docker compose logs -f php
 
 # Access PHP container
-docker-compose exec php bash
+docker compose exec php bash
 
 # Run Artisan commands
-docker-compose exec php php artisan [command]
+docker compose exec php php artisan [command]
 
 # Install Composer packages
-docker-compose exec php composer install
+docker compose exec php composer install
 
 # Install NPM packages
-docker-compose exec php npm install
+docker compose exec php npm install
 
 # Build frontend assets
-docker-compose exec php npm run build
+docker compose exec php npm run build
 ```
 
 ## Production Deployment
