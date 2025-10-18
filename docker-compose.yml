@@ -5,10 +5,13 @@ services:
       dockerfile: Dockerfile
     image: jemeh-shop-php:prod
     restart: unless-stopped
+    env_file:
+      - .env.docker
     environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: http://localhost
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost}
+      APP_KEY: ${APP_KEY:-}
       DB_CONNECTION: mysql
       DB_HOST: db
       DB_PORT: 3306
@@ -38,6 +41,8 @@ services:
   db:
     image: mariadb:11.4
     restart: unless-stopped
+    env_file:
+      - .env.docker
     environment:
       MARIADB_DATABASE: ${DB_DATABASE:-jemeh_shop_db}
       MARIADB_USER: ${DB_USERNAME:-jemeh}
@@ -55,7 +60,7 @@ services:
     image: alpine:3.20
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.docker
     environment:
       DB_HOST: db
       DB_DATABASE: ${DB_DATABASE:-jemeh_shop_db}

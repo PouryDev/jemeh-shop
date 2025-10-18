@@ -27,11 +27,27 @@ fi
 
 # App key
 if [ ! -f ".env" ]; then
-  cp .env.example .env || true
+  if [ -f ".env.docker" ]; then
+    cp .env.docker .env
+  else
+    echo "APP_NAME=\"جمه شاپ\"" > .env
+    echo "APP_ENV=production" >> .env
+    echo "APP_KEY=" >> .env
+    echo "APP_DEBUG=false" >> .env
+    echo "APP_URL=http://localhost" >> .env
+    echo "" >> .env
+    echo "DB_CONNECTION=mysql" >> .env
+    echo "DB_HOST=db" >> .env
+    echo "DB_PORT=3306" >> .env
+    echo "DB_DATABASE=jemeh_shop_db" >> .env
+    echo "DB_USERNAME=jemeh" >> .env
+    echo "DB_PASSWORD=secret" >> .env
+  fi
 fi
 
-if ! grep -q "^APP_KEY=" .env || [ -z "$(grep '^APP_KEY=' .env | cut -d= -f2-)" ]; then
-  php artisan key:generate --force || true
+# Generate APP_KEY if not exists or empty
+if ! grep -q "^APP_KEY=" .env || [ -z "$(grep '^APP_KEY=' .env | cut -d= -f2- | tr -d ' ')" ]; then
+  php artisan key:generate --force --no-interaction
 fi
 
 # Cache config/routes for production
