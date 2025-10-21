@@ -16,8 +16,9 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE:-jemeh_shop_db}
-      DB_USERNAME: ${DB_USERNAME:-jemeh}
-      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-rootpass}
+      LOG_CHANNEL: daily
       SESSION_DRIVER: file
       CACHE_DRIVER: file
     volumes:
