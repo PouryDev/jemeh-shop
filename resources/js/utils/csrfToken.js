@@ -48,6 +48,15 @@ export async function refreshCSRFToken() {
                     return data.token;
                 } else {
                     console.error('CSRF token refresh failed - invalid response:', data);
+                    // If token is null, try to get it from meta tag
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    const existingToken = metaTag ? metaTag.getAttribute('content') : null;
+                    
+                    if (existingToken) {
+                        console.log('Using existing CSRF token from meta tag');
+                        return existingToken;
+                    }
+                    
                     throw new Error('Invalid CSRF token response');
                 }
             } else {
@@ -171,7 +180,7 @@ export function setupCSRFTokenRefresh() {
         } catch (error) {
             console.error('Automatic CSRF token refresh failed:', error);
         }
-    }, 1 * 60 * 1000); // 30 minutes
+    }, 30 * 60 * 1000); // 30 minutes
 
     // Refresh token on page visibility change (user comes back to tab)
     // Debounce to prevent multiple rapid calls

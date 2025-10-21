@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\OrderController;
@@ -36,9 +37,23 @@ Route::get('/search/dropdown', [SearchController::class, 'search']);
 
 // CSRF token refresh endpoint
 Route::get('/csrf-token', function () {
+    // Ensure session is started
+    if (!session()->isStarted()) {
+        session()->start();
+    }
+    
+    // Generate CSRF token
+    $token = csrf_token();
+    
+    // If token is null, try to regenerate it
+    if (!$token) {
+        $token = Str::random(40);
+        session()->put('_token', $token);
+    }
+    
     return response()->json([
         'success' => true,
-        'token' => csrf_token()
+        'token' => $token
     ]);
 });
 
