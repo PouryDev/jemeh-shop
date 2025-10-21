@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { apiRequest } from '../utils/csrfToken';
 
 function AddressModal({ open, onClose, onSave, address = null, loading = false }) {
     const { user } = useAuth();

@@ -43,8 +43,10 @@ function AddressDropdown({ addresses, selectedAddress, onSelect, onAddNew, loadi
                                         {selectedAddress.address}
                                     </div>
                                 </>
-                            ) : (
+                            ) : addresses.length > 0 ? (
                                 <div className="text-gray-400 text-sm">انتخاب آدرس</div>
+                            ) : (
+                                <div className="text-gray-400 text-sm">افزودن آدرس جدید</div>
                             )}
                         </div>
                     </div>
@@ -64,8 +66,15 @@ function AddressDropdown({ addresses, selectedAddress, onSelect, onAddNew, loadi
                 <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl overflow-hidden">
                     <div className="max-h-80 overflow-y-auto">
                         {addresses.length === 0 ? (
-                            <div className="p-4 text-center text-gray-400 text-sm">
-                                آدرس ذخیره شده‌ای ندارید
+                            <div className="p-6 text-center">
+                                <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-white text-sm font-semibold mb-2">هنوز آدرسی اضافه نکرده‌اید</h3>
+                                <p className="text-gray-400 text-xs mb-4">اولین آدرس خود را اضافه کنید</p>
                             </div>
                         ) : (
                             addresses.map((address) => (

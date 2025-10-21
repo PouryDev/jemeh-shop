@@ -439,9 +439,11 @@ function CheckoutPage() {
                             </div>
                             
                             {/* Address Selection */}
-                            {authUser && addresses.length > 0 && (
+                            {authUser && (
                                 <div>
-                                    <label className="block text-sm text-gray-300 mb-2">انتخاب آدرس ذخیره شده</label>
+                                    <label className="block text-sm text-gray-300 mb-2">
+                                        {addresses.length > 0 ? 'انتخاب آدرس ذخیره شده' : 'آدرس ارسال'}
+                                    </label>
                                     <AddressDropdown
                                         addresses={addresses}
                                         selectedAddress={selectedAddress}
@@ -677,9 +679,11 @@ function CheckoutPage() {
                                     <input name="phone" value={form.phone} onChange={handleChange} placeholder="09123456789" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" required />
                                 </div>
                                 {/* Address Selection */}
-                                {authUser && addresses.length > 0 && (
+                                {authUser && (
                                     <div>
-                                        <label className="block text-sm text-gray-300 mb-2">انتخاب آدرس ذخیره شده</label>
+                                        <label className="block text-sm text-gray-300 mb-2">
+                                            {addresses.length > 0 ? 'انتخاب آدرس ذخیره شده' : 'آدرس ارسال'}
+                                        </label>
                                         <AddressDropdown
                                             addresses={addresses}
                                             selectedAddress={selectedAddress}

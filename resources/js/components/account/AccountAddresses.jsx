@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import AddressModal from '../AddressModal';
+import { apiRequest } from '../../utils/csrfToken';
 
 function AccountAddresses() {
     const { user } = useAuth();
@@ -15,16 +16,7 @@ function AccountAddresses() {
 
     const fetchAddresses = async () => {
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            const res = await fetch('/api/addresses', {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                credentials: 'same-origin',
-            });
-
+            const res = await apiRequest('/api/addresses');
             if (res.ok) {
                 const data = await res.json();
                 setAddresses(data.data || []);
@@ -52,36 +44,28 @@ function AccountAddresses() {
         }
 
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            const res = await fetch(`/api/addresses/${addressId}`, {
+            const res = await apiRequest(`/api/addresses/${addressId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                credentials: 'same-origin',
             });
 
             if (res.ok) {
                 setAddresses(prev => prev.filter(addr => addr.id !== addressId));
+                window.dispatchEvent(new CustomEvent('toast:show', { 
+                    detail: { type: 'success', message: 'آدرس با موفقیت حذف شد' } 
+                }));
             }
         } catch (error) {
             console.error('Error deleting address:', error);
+            window.dispatchEvent(new CustomEvent('toast:show', { 
+                detail: { type: 'error', message: 'خطا در حذف آدرس' } 
+            }));
         }
     };
 
     const handleSetDefault = async (addressId) => {
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            const res = await fetch(`/api/addresses/${addressId}/set-default`, {
+            const res = await apiRequest(`/api/addresses/${addressId}/set-default`, {
                 method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                credentials: 'same-origin',
             });
 
             if (res.ok) {
@@ -91,9 +75,15 @@ function AccountAddresses() {
                         is_default: addr.id === addressId
                     }))
                 );
+                window.dispatchEvent(new CustomEvent('toast:show', { 
+                    detail: { type: 'success', message: 'آدرس پیش‌فرض تنظیم شد' } 
+                }));
             }
         } catch (error) {
             console.error('Error setting default address:', error);
+            window.dispatchEvent(new CustomEvent('toast:show', { 
+                detail: { type: 'error', message: 'خطا در تنظیم آدرس پیش‌فرض' } 
+            }));
         }
     };
 
