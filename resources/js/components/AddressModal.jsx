@@ -53,9 +53,46 @@ function AddressModal({ open, onClose, onSave, address = null, loading = false }
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSave(form);
+        
+        try {
+            const url = address ? `/api/addresses/${address.id}` : '/api/addresses';
+            const method = address ? 'PUT' : 'POST';
+            
+            const res = await apiRequest(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(form)
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                // Show success toast
+                window.dispatchEvent(new CustomEvent('toast:show', {
+                    detail: { 
+                        type: 'success', 
+                        message: address ? 'آدرس با موفقیت ویرایش شد' : 'آدرس با موفقیت اضافه شد' 
+                    }
+                }));
+                onSave?.(data.data);
+                onClose?.();
+            } else {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'خطا در ذخیره آدرس');
+            }
+        } catch (error) {
+            console.error('Failed to save address:', error);
+            // Show error toast
+            window.dispatchEvent(new CustomEvent('toast:show', {
+                detail: { 
+                    type: 'error', 
+                    message: error.message || 'خطا در ذخیره آدرس' 
+                }
+            }));
+        }
     };
 
     if (!open) return null;

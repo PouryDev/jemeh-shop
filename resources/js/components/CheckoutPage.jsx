@@ -151,30 +151,11 @@ function CheckoutPage() {
         setAddressModalOpen(true);
     };
 
-    const handleSaveAddress = async (addressData) => {
-        setAddressLoading(true);
-        try {
-            const url = editingAddress ? `/api/addresses/${editingAddress.id}` : '/api/addresses';
-            const method = editingAddress ? 'PUT' : 'POST';
-            
-            const res = await apiRequest(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(addressData)
-            });
-
-            if (res.ok) {
-                await fetchAddresses(); // Refresh addresses
-                setAddressModalOpen(false);
-                setEditingAddress(null);
-            }
-        } catch (error) {
-            console.error('Failed to save address:', error);
-        } finally {
-            setAddressLoading(false);
-        }
+    const handleSaveAddress = () => {
+        // Refresh addresses list after successful save
+        fetchAddresses();
+        setAddressModalOpen(false);
+        setEditingAddress(null);
     };
 
     const handleChange = (e) => {
@@ -453,6 +434,11 @@ function CheckoutPage() {
                                     />
                                 </div>
                             )}
+                            {!authUser && (
+                                <div className="text-sm text-gray-400">
+                                    برای افزودن آدرس، ابتدا وارد حساب کاربری خود شوید
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm text-gray-300 mb-2">آدرس کامل</label>
@@ -693,6 +679,11 @@ function CheckoutPage() {
                                         />
                                     </div>
                                 )}
+                                {!authUser && (
+                                    <div className="text-sm text-gray-400">
+                                        برای افزودن آدرس، ابتدا وارد حساب کاربری خود شوید
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">آدرس کامل</label>
@@ -815,8 +806,12 @@ function CheckoutPage() {
                 onSuccess={(user) => {
                     setForm((prev) => ({ ...prev, name: user.name || '', phone: user.phone || '', address: user.address || '' }));
                     setAuthOpen(false);
-                    // Refetch delivery methods after successful authentication
+                    // Refetch delivery methods and addresses after successful authentication
                     fetchDeliveryMethods();
+                    // Small delay to ensure auth state is updated
+                    setTimeout(() => {
+                        fetchAddresses();
+                    }, 100);
                 }}
             />
 

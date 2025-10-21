@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../../utils/csrfToken';
 
 function AdminProductManagement() {
     const navigate = useNavigate();
@@ -12,15 +13,7 @@ function AdminProductManagement() {
         const loadProducts = async () => {
             try {
                 setLoading(true);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                
-                const res = await fetch('/api/admin/products', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': token || ''
-                    },
-                    credentials: 'same-origin'
-                });
+                const res = await apiRequest('/api/admin/products');
                 
                 if (res.ok) {
                     const data = await res.json();
@@ -52,15 +45,8 @@ function AdminProductManagement() {
         }
 
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            const res = await fetch(`/api/admin/products/${productId}`, {
+            const res = await apiRequest(`/api/admin/products/${productId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
-                },
-                credentials: 'same-origin'
             });
 
             if (res.ok) {

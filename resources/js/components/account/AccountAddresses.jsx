@@ -88,6 +88,7 @@ function AccountAddresses() {
     };
 
     const handleSaveAddress = () => {
+        // Refresh addresses list after successful save
         fetchAddresses();
         setAddressModalOpen(false);
         setEditingAddress(null);
@@ -253,7 +254,7 @@ function AccountAddresses() {
 
             {/* Address Modal */}
             <AddressModal
-                isOpen={addressModalOpen}
+                open={addressModalOpen}
                 onClose={() => {
                     setAddressModalOpen(false);
                     setEditingAddress(null);
