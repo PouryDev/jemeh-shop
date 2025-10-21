@@ -42,6 +42,15 @@ Route::get('/csrf-token', function () {
     ]);
 });
 
+// Delivery methods (public - needed for checkout)
+Route::get('/delivery-methods', function () {
+    $deliveryMethods = \App\Models\DeliveryMethod::active()->ordered()->get();
+    return response()->json([
+        'success' => true,
+        'data' => $deliveryMethods
+    ]);
+});
+
 // Auth routes (using web middleware for session support)
 Route::middleware('web')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login']);
@@ -73,15 +82,6 @@ Route::middleware(['web', 'auth'])->group(function () {
     // Address management
     Route::apiResource('addresses', \App\Http\Controllers\Api\AddressController::class);
     Route::post('/addresses/{address}/set-default', [\App\Http\Controllers\Api\AddressController::class, 'setDefault']);
-    
-    // Delivery methods
-    Route::get('/delivery-methods', function () {
-        $deliveryMethods = \App\Models\DeliveryMethod::active()->ordered()->get();
-        return response()->json([
-            'success' => true,
-            'data' => $deliveryMethods
-        ]);
-    });
 });
 
 // Admin API routes

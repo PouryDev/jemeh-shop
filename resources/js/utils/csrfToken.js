@@ -75,6 +75,7 @@ export async function apiRequest(url, options = {}) {
         ...options,
         headers: {
             'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': token || '',
             ...options.headers,
         },
@@ -124,6 +125,16 @@ export async function apiRequest(url, options = {}) {
  * Refreshes token every 30 minutes
  */
 export function setupCSRFTokenRefresh() {
+    // Initial token refresh on page load
+    setTimeout(async () => {
+        try {
+            await refreshCSRFToken();
+            console.log('CSRF token refreshed on page load');
+        } catch (error) {
+            console.error('Initial CSRF token refresh failed:', error);
+        }
+    }, 1000);
+
     // Refresh token every 30 minutes
     setInterval(async () => {
         try {
@@ -143,6 +154,16 @@ export function setupCSRFTokenRefresh() {
             } catch (error) {
                 console.error('CSRF token refresh on visibility change failed:', error);
             }
+        }
+    });
+
+    // Global error handler for CSRF token issues
+    window.addEventListener('unhandledrejection', (event) => {
+        if (event.reason && event.reason.status === 419) {
+            console.log('Unhandled CSRF token error detected, refreshing token...');
+            refreshCSRFToken().catch(error => {
+                console.error('Failed to refresh CSRF token in error handler:', error);
+            });
         }
     });
 }

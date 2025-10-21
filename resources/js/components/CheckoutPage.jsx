@@ -67,11 +67,21 @@ function CheckoutPage() {
     const fetchDeliveryMethods = React.useCallback(async () => {
         try {
             const res = await apiRequest('/api/delivery-methods');
-            if (!res.ok) throw new Error('failed');
+            if (!res.ok) {
+                if (res.status === 401) {
+                    console.warn('Delivery methods require authentication, but user is not authenticated');
+                    // Set empty array for unauthenticated users - they'll see delivery methods after login
+                    setDeliveryMethods([]);
+                    return;
+                }
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
             const data = await res.json();
             setDeliveryMethods(data.data || []);
         } catch (e) {
             console.error('Failed to fetch delivery methods:', e);
+            // Set empty array on error to prevent UI issues
+            setDeliveryMethods([]);
         }
     }, []);
 
@@ -101,12 +111,16 @@ function CheckoutPage() {
         fetchDeliveryMethods();
     }, [fetchCart, fetchDeliveryMethods]);
 
-    // Fetch addresses when user is authenticated
+    // Fetch addresses and delivery methods when user is authenticated
     React.useEffect(() => {
         if (authUser) {
             fetchAddresses();
+            // Refetch delivery methods after authentication (in case they were empty before)
+            if (deliveryMethods.length === 0) {
+                fetchDeliveryMethods();
+            }
         }
-    }, [authUser]);
+    }, [authUser, deliveryMethods.length, fetchDeliveryMethods]);
 
     const fetchAddresses = async () => {
         if (!authUser) return;
@@ -454,8 +468,15 @@ function CheckoutPage() {
                             {/* Delivery Method Selection */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-3">روش ارسال *</label>
-                                <div className="space-y-2">
-                                    {deliveryMethods.map((method) => (
+                                {deliveryMethods.length === 0 && !authUser ? (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
+                                        <div className="text-yellow-400 text-sm">
+                                            برای مشاهده روش‌های ارسال، ابتدا وارد حساب کاربری خود شوید
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {deliveryMethods.map((method) => (
                                         <div 
                                             key={method.id} 
                                             className={`relative cursor-pointer transition-all duration-200`}
@@ -490,7 +511,8 @@ function CheckoutPage() {
                                             </div>
                                         </div>
                                     ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -684,8 +706,15 @@ function CheckoutPage() {
                                 {/* Delivery Method Selection */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-3">روش ارسال *</label>
-                                    <div className="space-y-3">
-                                        {deliveryMethods.map((method) => (
+                                    {deliveryMethods.length === 0 && !authUser ? (
+                                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
+                                            <div className="text-yellow-400 text-sm">
+                                                برای مشاهده روش‌های ارسال، ابتدا وارد حساب کاربری خود شوید
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {deliveryMethods.map((method) => (
                                             <div 
                                                 key={method.id} 
                                                 className={`relative cursor-pointer transition-all duration-200`}
@@ -741,7 +770,8 @@ function CheckoutPage() {
                                                 </div>
                                             </div>
                                         ))}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -781,6 +811,8 @@ function CheckoutPage() {
                 onSuccess={(user) => {
                     setForm((prev) => ({ ...prev, name: user.name || '', phone: user.phone || '', address: user.address || '' }));
                     setAuthOpen(false);
+                    // Refetch delivery methods after successful authentication
+                    fetchDeliveryMethods();
                 }}
             />
 

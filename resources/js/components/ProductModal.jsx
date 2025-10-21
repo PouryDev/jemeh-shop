@@ -251,20 +251,56 @@ function ProductModal({ product, isOpen, onClose }) {
 
     function handleBackdropClick(e) {
         if (e.target === e.currentTarget) {
-            onClose();
+            handleClose();
         }
     }
 
     function handleKeyDown(e) {
         if (e.key === 'Escape') {
-            onClose();
+            handleClose();
         }
     }
+
+    // Clean up history state when modal closes programmatically
+    const handleClose = () => {
+        // Check if current history state is our modal state
+        const currentState = window.history.state;
+        if (currentState && currentState.modal === 'product') {
+            // Replace current state to avoid back button issues
+            window.history.replaceState(null, '', window.location.href);
+        }
+        onClose();
+    };
 
     useEffect(() => {
         if (isOpen) {
             document.addEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'hidden';
+            
+            // Add history state for mobile back button support
+            const modalState = { modal: 'product', productSlug: product?.slug };
+            const currentState = window.history.state;
+            
+            // Only push state if current state is not already our modal state
+            if (!currentState || currentState.modal !== 'product') {
+                window.history.pushState(modalState, '', window.location.href);
+            }
+            
+            // Listen for back button press
+            const handlePopState = (event) => {
+                // If the modal is open and user pressed back button, close the modal
+                if (isOpen) {
+                    handleClose();
+                }
+            };
+            
+            window.addEventListener('popstate', handlePopState);
+            
+            return () => {
+                document.removeEventListener('keydown', handleKeyDown);
+                window.removeEventListener('popstate', handlePopState);
+                document.body.style.overflow = 'unset';
+            };
         } else {
             document.body.style.overflow = 'unset';
         }
@@ -273,7 +309,7 @@ function ProductModal({ product, isOpen, onClose }) {
             document.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'unset';
         };
-    }, [isOpen]);
+    }, [isOpen, product?.slug, onClose]);
 
     if (!isOpen || !product) return null;
 
@@ -295,7 +331,7 @@ function ProductModal({ product, isOpen, onClose }) {
                 {/* Header */}
                 <div className="sticky top-0 bg-gray-900/80 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center justify-between z-10">
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                     >
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

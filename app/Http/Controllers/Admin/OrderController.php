@@ -23,7 +23,7 @@ class OrderController extends Controller
             })
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($q2) use ($q) {
-                    $q2->where('customer_name', 'like', "%{$q}%")
+                    $q2->where(column: 'customer_name', 'like', "%{$q}%")
                         ->orWhere('customer_phone', 'like', "%{$q}%")
                         ->orWhere('id', $q);
                 });

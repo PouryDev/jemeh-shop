@@ -23,11 +23,10 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'instagram_id' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:users,email,' . auth()->id(),
         ]);
 
         $user = auth()->user();
-        $user->update($request->only(['name', 'phone', 'instagram_id', 'email']));
+        $user->update($request->only(['name', 'phone', 'instagram_id']));
 
         return response()->json([
             'success' => true,

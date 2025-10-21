@@ -1,9 +1,10 @@
 import './bootstrap';
+import { apiRequest } from './utils/csrfToken';
 
 // Toast minimal
 window.showToast = function(message, type = 'success'){
   const el = document.createElement('div');
-  el.className = `fixed left-1/2 -translate-x-1/2 top-4 z-[9999] px-4 py-2 rounded-lg text-sm text-white ${type==='error'?'bg-red-600':'bg-cherry-600'} shadow-lg anim-fade-up`;
+  el.className = `fixed left-1/2 -translate-x-1/2 bottom-4 z-[9999] px-4 py-2 rounded-lg text-sm text-white ${type==='error'?'bg-red-600':'bg-cherry-600'} shadow-lg anim-fade-up`;
   el.textContent = message;
   document.body.appendChild(el);
   setTimeout(()=>{ el.remove(); }, 2500);
@@ -17,11 +18,9 @@ document.addEventListener('click', async (e) => {
     const url = addBtn.getAttribute('data-url');
     const quantity = addBtn.getAttribute('data-qty') || 1;
     try {
-      const res = await fetch(url, {
+      const res = await apiRequest(url, {
         method: 'POST',
         headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ quantity })
@@ -30,6 +29,7 @@ document.addEventListener('click', async (e) => {
       updateCartUI(data);
       showToast('به سبد افزوده شد');
     } catch (err) {
+      console.error('Add to cart error:', err);
       showToast('خطا در افزودن به سبد', 'error');
     }
   }
@@ -70,19 +70,23 @@ function updateCartUI(payload){
 // Initialize cart dropdown on load
 window.addEventListener('DOMContentLoaded', async ()=>{
   try {
-    const res = await fetch('/cart/json', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    const res = await apiRequest('/cart/json');
     const data = await res.json();
     updateCartUI(data);
-  } catch {}
+  } catch (err) {
+    console.error('Failed to load cart:', err);
+  }
 });
 
 // Listen for cart updates from React components
 window.addEventListener('cart:update', async ()=>{
   try {
-    const res = await fetch('/cart/json', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    const res = await apiRequest('/cart/json');
     const data = await res.json();
     updateCartUI(data);
-  } catch {}
+  } catch (err) {
+    console.error('Failed to update cart:', err);
+  }
 });
 
 // Live search for products (home page)
@@ -93,7 +97,7 @@ document.addEventListener('input', async (e)=>{
   const url = new URL(window.location.href);
   url.searchParams.set('q', q);
   try {
-    const res = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    const res = await apiRequest(url.toString());
     const html = await res.text();
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
@@ -102,5 +106,7 @@ document.addEventListener('input', async (e)=>{
       const currentGrid = document.querySelector('.shop-grid');
       if (currentGrid) currentGrid.replaceWith(grid);
     }
-  } catch {}
+  } catch (err) {
+    console.error('Live search error:', err);
+  }
 });
