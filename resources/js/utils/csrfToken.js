@@ -16,21 +16,28 @@ export async function refreshCSRFToken() {
 
     csrfTokenRefreshPromise = (async () => {
         try {
+            console.log('Refreshing CSRF token...');
             const response = await fetch('/api/csrf-token', {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: {
                     'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 }
             });
 
+            console.log('CSRF token refresh response status:', response.status);
+            
             if (response.ok) {
                 const data = await response.json();
-                if (data.success) {
+                console.log('CSRF token refresh response:', data);
+                
+                if (data.success && data.token) {
                     // Update meta tag
                     const metaTag = document.querySelector('meta[name="csrf-token"]');
                     if (metaTag) {
                         metaTag.setAttribute('content', data.token);
+                        console.log('CSRF token updated in meta tag');
                     }
                     
                     // Dispatch event for other components
@@ -39,9 +46,16 @@ export async function refreshCSRFToken() {
                     }));
                     
                     return data.token;
+                } else {
+                    console.error('CSRF token refresh failed - invalid response:', data);
+                    throw new Error('Invalid CSRF token response');
                 }
+            } else {
+                console.error('CSRF token refresh failed with status:', response.status);
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                throw new Error(`CSRF token refresh failed: ${response.status}`);
             }
-            throw new Error('Failed to refresh CSRF token');
         } catch (error) {
             console.error('CSRF token refresh failed:', error);
             throw error;
@@ -70,6 +84,7 @@ export function getCSRFToken() {
  */
 export async function apiRequest(url, options = {}) {
     const token = getCSRFToken();
+    console.log('Making API request to:', url, 'with CSRF token:', token ? 'Present' : 'Missing');
     
     const requestOptions = {
         ...options,
@@ -115,9 +130,12 @@ export async function apiRequest(url, options = {}) {
                 
                 console.log('Retrying request with new CSRF token...');
                 const retryResponse = await fetch(url, retryOptions);
+                console.log('Retry response status:', retryResponse.status);
                 
                 if (retryResponse.status === 419) {
                     console.error('CSRF token still invalid after refresh');
+                    const errorText = await retryResponse.text();
+                    console.error('Retry error response:', errorText);
                     throw new Error('CSRF token mismatch');
                 }
                 
@@ -142,17 +160,10 @@ export async function apiRequest(url, options = {}) {
 let visibilityRefreshTimeout = null;
 
 export function setupCSRFTokenRefresh() {
-    // Initial token refresh on page load
-    setTimeout(async () => {
-        try {
-            await refreshCSRFToken();
-            console.log('CSRF token refreshed on page load');
-        } catch (error) {
-            console.error('Initial CSRF token refresh failed:', error);
-        }
-    }, 1000);
-
-    // Refresh token every 30 minutes
+    // Don't refresh on page load - use the token from the initial page render
+    // This ensures the token matches the session
+    
+    // Refresh token every 30 minutes (but not too aggressively)
     setInterval(async () => {
         try {
             await refreshCSRFToken();
@@ -160,7 +171,7 @@ export function setupCSRFTokenRefresh() {
         } catch (error) {
             console.error('Automatic CSRF token refresh failed:', error);
         }
-    }, 30 * 60 * 1000); // 30 minutes
+    }, 1 * 60 * 1000); // 30 minutes
 
     // Refresh token on page visibility change (user comes back to tab)
     // Debounce to prevent multiple rapid calls
