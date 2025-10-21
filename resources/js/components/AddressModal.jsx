@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiRequest, refreshCSRFToken } from '../utils/csrfToken';
+import { apiRequest } from '../utils/csrfToken';
 
 function AddressModal({ open, onClose, onSave, address = null, loading = false }) {
     const { user } = useAuth();
@@ -57,9 +57,6 @@ function AddressModal({ open, onClose, onSave, address = null, loading = false }
         e.preventDefault();
         
         try {
-            // Explicitly refresh CSRF token before submitting
-            await refreshCSRFToken();
-            
             const url = address ? `/api/addresses/${address.id}` : '/api/addresses';
             const method = address ? 'PUT' : 'POST';
             

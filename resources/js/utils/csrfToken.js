@@ -93,24 +93,39 @@ export async function apiRequest(url, options = {}) {
         // If CSRF token expired (419), refresh and retry
         if (response.status === 419) {
             console.log('CSRF token expired, refreshing...');
-            await refreshCSRFToken();
-            
-            // Retry the request with new token
-            const newToken = getCSRFToken();
-            const retryOptions = {
-                ...requestOptions,
-                headers: {
-                    ...requestOptions.headers,
-                    'X-CSRF-TOKEN': newToken || '',
+            try {
+                await refreshCSRFToken();
+                
+                // Get the new token and retry the request
+                const newToken = getCSRFToken();
+                console.log('New CSRF token obtained:', newToken ? 'Yes' : 'No');
+                
+                const retryOptions = {
+                    ...requestOptions,
+                    headers: {
+                        ...requestOptions.headers,
+                        'X-CSRF-TOKEN': newToken || '',
+                    }
+                };
+                
+                // Don't set Content-Type for FormData in retry either
+                if (options.body instanceof FormData) {
+                    delete retryOptions.headers['Content-Type'];
                 }
-            };
-            
-            // Don't set Content-Type for FormData in retry either
-            if (options.body instanceof FormData) {
-                delete retryOptions.headers['Content-Type'];
+                
+                console.log('Retrying request with new CSRF token...');
+                const retryResponse = await fetch(url, retryOptions);
+                
+                if (retryResponse.status === 419) {
+                    console.error('CSRF token still invalid after refresh');
+                    throw new Error('CSRF token mismatch');
+                }
+                
+                return retryResponse;
+            } catch (refreshError) {
+                console.error('Failed to refresh CSRF token:', refreshError);
+                throw new Error('CSRF token mismatch');
             }
-            
-            return await fetch(url, retryOptions);
         }
         
         return response;
@@ -124,6 +139,8 @@ export async function apiRequest(url, options = {}) {
  * Setup automatic CSRF token refresh
  * Refreshes token every 30 minutes
  */
+let visibilityRefreshTimeout = null;
+
 export function setupCSRFTokenRefresh() {
     // Initial token refresh on page load
     setTimeout(async () => {
@@ -146,14 +163,23 @@ export function setupCSRFTokenRefresh() {
     }, 30 * 60 * 1000); // 30 minutes
 
     // Refresh token on page visibility change (user comes back to tab)
-    document.addEventListener('visibilitychange', async () => {
+    // Debounce to prevent multiple rapid calls
+    document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
-            try {
-                await refreshCSRFToken();
-                console.log('CSRF token refreshed on page visibility change');
-            } catch (error) {
-                console.error('CSRF token refresh on visibility change failed:', error);
+            // Clear any existing timeout
+            if (visibilityRefreshTimeout) {
+                clearTimeout(visibilityRefreshTimeout);
             }
+            
+            // Set a new timeout to debounce the refresh
+            visibilityRefreshTimeout = setTimeout(async () => {
+                try {
+                    await refreshCSRFToken();
+                    console.log('CSRF token refreshed on page visibility change');
+                } catch (error) {
+                    console.error('CSRF token refresh on visibility change failed:', error);
+                }
+            }, 500); // 500ms debounce
         }
     });
 
