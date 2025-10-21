@@ -44,6 +44,7 @@ RUN echo "APP_NAME=\"جمه شاپ\"" > .env && \
     echo "DB_DATABASE=jemeh_shop_db" >> .env && \
     echo "DB_USERNAME=root" >> .env && \
     echo "DB_PASSWORD=rootpass" >> .env && \
+    echo "LOG_CHANNEL=daily" >> .env && \
     php artisan key:generate --no-interaction
 
 EXPOSE 9000
