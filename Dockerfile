@@ -42,8 +42,8 @@ RUN echo "APP_NAME=\"جمه شاپ\"" > .env && \
     echo "DB_HOST=db" >> .env && \
     echo "DB_PORT=3306" >> .env && \
     echo "DB_DATABASE=jemeh_shop_db" >> .env && \
-    echo "DB_USERNAME=jemeh" >> .env && \
-    echo "DB_PASSWORD=secret" >> .env && \
+    echo "DB_USERNAME=root" >> .env && \
+    echo "DB_PASSWORD=rootpass" >> .env && \
     php artisan key:generate --no-interaction
 
 EXPOSE 9000
