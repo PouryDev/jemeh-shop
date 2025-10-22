@@ -5,6 +5,7 @@ import AddressDropdown from './AddressDropdown';
 import AddressModal from './AddressModal';
 import FileUpload from './FileUpload';
 import { apiRequest } from '../utils/csrfToken';
+import { showToast } from '../utils/toast';
 
 function CheckoutPage() {
     const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -98,7 +99,7 @@ function CheckoutPage() {
                 count: data.count || 0 
             });
         } catch (e) {
-            window.showToast('خطا در دریافت اطلاعات سبد', 'error');
+            showToast('خطا در دریافت اطلاعات سبد', 'error');
         } finally {
             setLoading(false);
         }
@@ -192,23 +193,23 @@ function CheckoutPage() {
         
         // Basic client-side validation before submission with toast notifications
         if (!form.name.trim()) {
-            window.showToast('نام و نام خانوادگی الزامی است', 'error');
+            showToast('نام و نام خانوادگی الزامی است', 'error');
             return;
         }
         if (!form.phone.trim()) {
-            window.showToast('شماره تماس الزامی است', 'error');
+            showToast('شماره تماس الزامی است', 'error');
             return;
         }
         if (!form.address.trim()) {
-            window.showToast('آدرس الزامی است', 'error');
+            showToast('آدرس الزامی است', 'error');
             return;
         }
         if (!form.delivery_method_id) {
-            window.showToast('انتخاب روش ارسال الزامی است', 'error');
+            showToast('انتخاب روش ارسال الزامی است', 'error');
             return;
         }
         if (!form.receipt) {
-            window.showToast('آپلود فیش واریزی الزامی است', 'error');
+            showToast('آپلود فیش واریزی الزامی است', 'error');
             return;
         }
         
@@ -238,9 +239,9 @@ function CheckoutPage() {
                     // Show first validation error as toast
                     const firstError = Object.values(errorData.errors)[0];
                     if (firstError && firstError[0]) {
-                        window.showToast(firstError[0], 'error');
+                        showToast(firstError[0], 'error');
                     } else {
-                        window.showToast(errorData.message || 'لطفاً خطاهای زیر را برطرف کنید', 'error');
+                        showToast(errorData.message || 'لطفاً خطاهای زیر را برطرف کنید', 'error');
                     }
                     setSubmitting(false);
                     return;
@@ -253,14 +254,14 @@ function CheckoutPage() {
             
             if (data.success) {
                 // Show success toast
-                window.showToast('سفارش با موفقیت ثبت شد', 'success');
+                showToast('سفارش با موفقیت ثبت شد', 'success');
                 // Redirect to React SPA thanks page
                 window.location.href = `/thanks/${data.invoice.id}`;
             } else {
                 throw new Error(data.message || 'خطا در ثبت سفارش');
             }
         } catch (e) {
-            window.showToast(e.message || 'ثبت سفارش با خطا مواجه شد', 'error');
+            showToast(e.message || 'ثبت سفارش با خطا مواجه شد', 'error');
             setSubmitting(false);
         }
     }
