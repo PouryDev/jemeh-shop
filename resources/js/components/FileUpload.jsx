@@ -9,7 +9,8 @@ function FileUpload({
     label = "آپلود فایل",
     placeholder = "فایل را انتخاب کنید",
     className = "",
-    preview = true 
+    preview = true,
+    error = null
 }) {
     const fileInputRef = React.useRef(null);
     const [previewUrl, setPreviewUrl] = React.useState(null);
@@ -109,7 +110,11 @@ function FileUpload({
             {!value && (
                 <div 
                     onClick={handleClick}
-                    className="relative border-2 border-dashed border-white/20 rounded-xl p-6 text-center cursor-pointer hover:border-cherry-500/50 hover:bg-white/5 transition-all duration-200 group"
+                    className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-white/5 transition-all duration-200 group ${
+                        error 
+                            ? 'border-red-500/50 hover:border-red-500/70' 
+                            : 'border-white/20 hover:border-cherry-500/50'
+                    }`}
                 >
                     <div className="flex flex-col items-center space-y-3">
                         {/* Upload Icon */}
@@ -199,6 +204,11 @@ function FileUpload({
                         </div>
                     )}
                 </div>
+            )}
+            
+            {/* Error Message */}
+            {error && (
+                <div className="text-red-400 text-xs mt-1">{error}</div>
             )}
         </div>
     );

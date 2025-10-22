@@ -126,14 +126,27 @@ class CheckoutController extends Controller
 
     public function place(Request $request)
     {
-        $data = $request->validate([
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:50',
-            'customer_address' => 'required|string|max:1000',
-            'receipt' => 'required|image|max:4096',
-            'delivery_method_id' => 'required|exists:delivery_methods,id',
-            'discount_code' => 'nullable|string|max:50',
-        ]);
+        try {
+            $data = $request->validate([
+                'customer_name' => 'required|string|max:255',
+                'customer_phone' => 'required|string|max:50',
+                'customer_address' => 'required|string|max:1000',
+                'receipt' => 'required|image|max:4096',
+                'delivery_method_id' => 'required|exists:delivery_methods,id',
+                'discount_code' => 'nullable|string|max:50',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // For API requests (React), return JSON with validation errors
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در اعتبارسنجی اطلاعات',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            // For regular requests, use the default behavior
+            throw $e;
+        }
 
         $cart = $request->session()->get('cart', []);
         if (empty($cart)) {
@@ -167,6 +180,14 @@ class CheckoutController extends Controller
                 $discountAmount = $result['discount_amount'];
                 $discountCode = $result['discount_code'];
             } else {
+                // For API requests (React), return JSON with validation errors
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'خطا در کد تخفیف',
+                        'errors' => ['discount_code' => [$result['message']]],
+                    ], 422);
+                }
                 return back()->withErrors(['discount_code' => $result['message']]);
             }
         }

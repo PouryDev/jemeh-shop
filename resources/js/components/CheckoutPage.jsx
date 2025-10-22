@@ -10,6 +10,7 @@ function CheckoutPage() {
     const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
+    const [validationErrors, setValidationErrors] = React.useState({});
     const [cart, setCart] = React.useState({ 
         items: [], 
         total: 0, 
@@ -32,6 +33,10 @@ function CheckoutPage() {
 
     const formatPrice = (v) => {
         try { return Number(v || 0).toLocaleString('fa-IR'); } catch { return v; }
+    };
+
+    const getFieldError = (fieldName) => {
+        return validationErrors[fieldName] ? validationErrors[fieldName][0] : null;
     };
 
     const [authOpen, setAuthOpen] = React.useState(false);
@@ -186,22 +191,38 @@ function CheckoutPage() {
     async function handleSubmit(e) {
         e.preventDefault();
         
-        // Validate required fields
-        if (!form.receipt) {
-            setError('لطفاً فیش واریزی را آپلود کنید');
-            return;
-        }
-        
-        if (!form.delivery_method_id) {
-            setError('لطفاً روش ارسال را انتخاب کنید');
-            return;
-        }
+        // Clear previous errors
+        setError(null);
+        setValidationErrors({});
         
         // Gate by auth: if not logged in, open auth modal instead of submit
         if (!authUser) {
             setAuthOpen(true);
             return;
         }
+        
+        // Basic client-side validation before submission
+        if (!form.name.trim()) {
+            setValidationErrors({ customer_name: ['نام و نام خانوادگی الزامی است'] });
+            return;
+        }
+        if (!form.phone.trim()) {
+            setValidationErrors({ customer_phone: ['شماره تماس الزامی است'] });
+            return;
+        }
+        if (!form.address.trim()) {
+            setValidationErrors({ customer_address: ['آدرس الزامی است'] });
+            return;
+        }
+        if (!form.delivery_method_id) {
+            setValidationErrors({ delivery_method_id: ['انتخاب روش ارسال الزامی است'] });
+            return;
+        }
+        if (!form.receipt) {
+            setValidationErrors({ receipt: ['آپلود فیش واریزی الزامی است'] });
+            return;
+        }
+        
         setSubmitting(true);
         try {
             // Use FormData for file upload
@@ -222,6 +243,15 @@ function CheckoutPage() {
             
             if (!res.ok) {
                 const errorData = await res.json();
+                
+                // Handle validation errors (422 status)
+                if (res.status === 422 && errorData.errors) {
+                    setValidationErrors(errorData.errors);
+                    setError(errorData.message || 'لطفاً خطاهای زیر را برطرف کنید');
+                    setSubmitting(false); // Make sure to reset submitting state
+                    return;
+                }
+                
                 throw new Error(errorData.message || 'خطا در ثبت سفارش');
             }
             
@@ -234,9 +264,8 @@ function CheckoutPage() {
                 throw new Error(data.message || 'خطا در ثبت سفارش');
             }
         } catch (e) {
-            setError('ثبت سفارش با خطا مواجه شد');
-        } finally {
-            setSubmitting(false);
+            setError(e.message || 'ثبت سفارش با خطا مواجه شد');
+            setSubmitting(false); // Make sure to reset submitting state
         }
     }
 
@@ -396,15 +425,29 @@ function CheckoutPage() {
                         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-4 space-y-4">
                             <h2 className="text-white font-bold text-lg mb-4">اطلاعات سفارش</h2>
                             
+                            {/* General Error Message */}
+                            {error && (
+                                <div className="bg-red-500/10 backdrop-blur-sm rounded-xl p-3 border border-red-500/20">
+                                    <div className="text-red-400 text-sm text-center">{error}</div>
+                                </div>
+                            )}
+                            
                             <div>
                                 <label className="block text-sm text-gray-300 mb-2">نام و نام خانوادگی</label>
                                 <input 
                                     name="name" 
                                     value={form.name} 
                                     onChange={handleChange} 
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors" 
+                                    className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-colors ${
+                                        getFieldError('customer_name') 
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                            : 'border-white/10 focus:border-cherry-500 focus:ring-cherry-500'
+                                    }`}
                                     required 
                                 />
+                                {getFieldError('customer_name') && (
+                                    <div className="text-red-400 text-xs mt-1">{getFieldError('customer_name')}</div>
+                                )}
                             </div>
                             
                             <div>
@@ -414,9 +457,16 @@ function CheckoutPage() {
                                     value={form.phone} 
                                     onChange={handleChange} 
                                     placeholder="09123456789" 
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors" 
+                                    className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-colors ${
+                                        getFieldError('customer_phone') 
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                            : 'border-white/10 focus:border-cherry-500 focus:ring-cherry-500'
+                                    }`}
                                     required 
                                 />
+                                {getFieldError('customer_phone') && (
+                                    <div className="text-red-400 text-xs mt-1">{getFieldError('customer_phone')}</div>
+                                )}
                             </div>
                             
                             {/* Address Selection */}
@@ -447,15 +497,25 @@ function CheckoutPage() {
                                     value={form.address} 
                                     onChange={handleChange} 
                                     rows={4} 
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors resize-none" 
+                                    className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-colors resize-none ${
+                                        getFieldError('customer_address') 
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                            : 'border-white/10 focus:border-cherry-500 focus:ring-cherry-500'
+                                    }`}
                                     required 
                                     placeholder="آدرس کامل خود را وارد کنید..."
                                 />
+                                {getFieldError('customer_address') && (
+                                    <div className="text-red-400 text-xs mt-1">{getFieldError('customer_address')}</div>
+                                )}
                             </div>
 
                             {/* Delivery Method Selection */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-3">روش ارسال *</label>
+                                {getFieldError('delivery_method_id') && (
+                                    <div className="text-red-400 text-xs mb-2">{getFieldError('delivery_method_id')}</div>
+                                )}
                                 {deliveryMethods.length === 0 && !authUser ? (
                                     <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
                                         <div className="text-yellow-400 text-sm">
@@ -511,7 +571,11 @@ function CheckoutPage() {
                                         value={form.discount_code} 
                                         onChange={handleChange} 
                                         placeholder="کد تخفیف را وارد کنید" 
-                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cherry-500 focus:ring-1 focus:ring-cherry-500 transition-colors" 
+                                        className={`flex-1 bg-white/5 border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-colors ${
+                                            getFieldError('discount_code') 
+                                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                                : 'border-white/10 focus:border-cherry-500 focus:ring-cherry-500'
+                                        }`}
                                     />
                                     <button 
                                         type="button" 
@@ -521,6 +585,9 @@ function CheckoutPage() {
                                         اعمال
                                     </button>
                                 </div>
+                                {getFieldError('discount_code') && (
+                                    <div className="text-red-400 text-xs mt-1">{getFieldError('discount_code')}</div>
+                                )}
                                 {discountInfo && (
                                     <div className="text-xs text-green-400 mt-2 flex items-center gap-1">
                                         <span>✅</span>
@@ -538,6 +605,7 @@ function CheckoutPage() {
                                 label="آپلود فیش واریزی"
                                 placeholder="فیش واریزی را انتخاب کنید"
                                 className="mt-2"
+                                error={getFieldError('receipt')}
                             />
 
                             <button 
@@ -656,13 +724,46 @@ function CheckoutPage() {
                         {/* Form */}
                         <div>
                             <form onSubmit={handleSubmit} className="bg-white/5 glass-card rounded-xl p-4 space-y-3 soft-shadow">
+                                {/* General Error Message */}
+                                {error && (
+                                    <div className="bg-red-500/10 backdrop-blur-sm rounded-xl p-3 border border-red-500/20">
+                                        <div className="text-red-400 text-sm text-center">{error}</div>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">نام و نام خانوادگی</label>
-                                    <input name="name" value={form.name} onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" required />
+                                    <input 
+                                        name="name" 
+                                        value={form.name} 
+                                        onChange={handleChange} 
+                                        className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-white ${
+                                            getFieldError('customer_name') 
+                                                ? 'border-red-500' 
+                                                : 'border-white/10'
+                                        }`}
+                                        required 
+                                    />
+                                    {getFieldError('customer_name') && (
+                                        <div className="text-red-400 text-xs mt-1">{getFieldError('customer_name')}</div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">شماره تماس</label>
-                                    <input name="phone" value={form.phone} onChange={handleChange} placeholder="09123456789" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" required />
+                                    <input 
+                                        name="phone" 
+                                        value={form.phone} 
+                                        onChange={handleChange} 
+                                        placeholder="09123456789" 
+                                        className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-white ${
+                                            getFieldError('customer_phone') 
+                                                ? 'border-red-500' 
+                                                : 'border-white/10'
+                                        }`}
+                                        required 
+                                    />
+                                    {getFieldError('customer_phone') && (
+                                        <div className="text-red-400 text-xs mt-1">{getFieldError('customer_phone')}</div>
+                                    )}
                                 </div>
                                 {/* Address Selection */}
                                 {authUser && (
@@ -692,15 +793,25 @@ function CheckoutPage() {
                                         value={form.address} 
                                         onChange={handleChange} 
                                         rows={4} 
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" 
+                                        className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-white ${
+                                            getFieldError('customer_address') 
+                                                ? 'border-red-500' 
+                                                : 'border-white/10'
+                                        }`}
                                         required 
                                         placeholder="آدرس کامل خود را وارد کنید..."
                                     />
+                                    {getFieldError('customer_address') && (
+                                        <div className="text-red-400 text-xs mt-1">{getFieldError('customer_address')}</div>
+                                    )}
                                 </div>
 
                                 {/* Delivery Method Selection */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-3">روش ارسال *</label>
+                                    {getFieldError('delivery_method_id') && (
+                                        <div className="text-red-400 text-xs mb-2">{getFieldError('delivery_method_id')}</div>
+                                    )}
                                     {deliveryMethods.length === 0 && !authUser ? (
                                         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
                                             <div className="text-yellow-400 text-sm">
@@ -772,9 +883,22 @@ function CheckoutPage() {
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">کد تخفیف</label>
                                     <div className="flex gap-2">
-                                        <input name="discount_code" value={form.discount_code} onChange={handleChange} placeholder="کد تخفیف را وارد کنید" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
+                                        <input 
+                                            name="discount_code" 
+                                            value={form.discount_code} 
+                                            onChange={handleChange} 
+                                            placeholder="کد تخفیف را وارد کنید" 
+                                            className={`flex-1 bg-white/5 border rounded-lg px-3 py-2 text-white ${
+                                                getFieldError('discount_code') 
+                                                    ? 'border-red-500' 
+                                                    : 'border-white/10'
+                                            }`}
+                                        />
                                         <button type="button" onClick={applyDiscount} className="bg-gray-600 hover:bg-gray-700 text-white rounded-lg px-4 py-2 whitespace-nowrap">اعمال</button>
                                     </div>
+                                    {getFieldError('discount_code') && (
+                                        <div className="text-red-400 text-xs mt-1">{getFieldError('discount_code')}</div>
+                                    )}
                                     {discountInfo && (
                                         <div className="text-xs text-green-400 mt-2">✅ کد {discountInfo.code} اعمال شد ({formatPrice(discountInfo.amount)} تومان تخفیف)</div>
                                     )}
@@ -789,6 +913,7 @@ function CheckoutPage() {
                                     label="آپلود فیش واریزی"
                                     placeholder="فیش واریزی را انتخاب کنید"
                                     className="mt-2"
+                                    error={getFieldError('receipt')}
                                 />
 
                                 <button type="submit" disabled={submitting} className="w-full bg-cherry-600 hover:bg-cherry-500 disabled:opacity-60 text-white rounded-lg px-4 py-2.5">
