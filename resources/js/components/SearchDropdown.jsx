@@ -96,9 +96,9 @@ function SearchDropdown({ onSearch, initialQuery = '' }) {
 
     const handleResultClick = async (result) => {
         if (result.type === 'product') {
-            // Fetch full product details
+            // Fetch full product details using slug
             try {
-                const response = await fetch(`/api/products/${result.id}`, {
+                const response = await fetch(`/api/products/${result.slug}`, {
                     headers: {
                         'Accept': 'application/json'
                     }

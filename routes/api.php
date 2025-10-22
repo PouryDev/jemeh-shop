@@ -99,8 +99,18 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/addresses/{address}/set-default', [\App\Http\Controllers\Api\AddressController::class, 'setDefault']);
 });
 
-// Admin API routes
+// Admin API routes - use web middleware but handle CSRF properly
 Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
+    // Test CSRF token endpoint
+    Route::get('/csrf-test', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'CSRF token is valid',
+            'token' => csrf_token(),
+            'session_id' => session()->getId(),
+        ]);
+    });
+    
     // Dashboard
     Route::get('/dashboard', [\App\Http\Controllers\Api\AdminDashboardController::class, 'index']);
     

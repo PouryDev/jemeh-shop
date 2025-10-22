@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { initializeAdminApi } from '../../utils/adminApi';
 
 function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -34,6 +35,13 @@ function AdminLayout() {
             }
         }
     }, [loading, isAuthenticated, isAdmin, navigate]);
+
+    // Initialize admin API when component mounts
+    useEffect(() => {
+        if (isAuthenticated && isAdmin) {
+            initializeAdminApi();
+        }
+    }, [isAuthenticated, isAdmin]);
 
     const menuItems = [
         {

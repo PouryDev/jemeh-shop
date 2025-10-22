@@ -43,6 +43,7 @@ class SearchController extends Controller
             ->map(function ($product) {
                 return [
                     'id' => $product->id,
+                    'slug' => $product->slug,
                     'title' => $product->title,
                     'price' => $product->price,
                     'image' => $product->images->first()?->url ?? '/images/placeholder.jpg',
