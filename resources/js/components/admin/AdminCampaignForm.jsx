@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ModernCheckbox from './ModernCheckbox';
+import { apiRequest } from '../../utils/csrfToken';
+import { showToast } from '../../utils/toast';
 
 function AdminCampaignForm() {
     const navigate = useNavigate();
@@ -103,8 +105,6 @@ function AdminCampaignForm() {
         setLoading(true);
 
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
             const url = isEdit ? `/api/admin/campaigns/${id}` : '/api/admin/campaigns';
             const method = isEdit ? 'PUT' : 'POST';
 
@@ -113,34 +113,40 @@ function AdminCampaignForm() {
                 product_ids: selectedProducts.map(p => p.id)
             };
 
-            const res = await fetch(url, {
+            const res = await apiRequest(url, {
                 method,
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
+                    'Content-Type': 'application/json'
                 },
-                credentials: 'same-origin',
                 body: JSON.stringify(requestData)
             });
 
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
-                    window.dispatchEvent(new CustomEvent('toast:show', { 
-                        detail: { 
-                            type: 'success', 
-                            message: isEdit ? 'کمپین با موفقیت به‌روزرسانی شد' : 'کمپین با موفقیت ایجاد شد' 
-                        } 
-                    }));
+                    showToast(isEdit ? 'کمپین با موفقیت به‌روزرسانی شد' : 'کمپین با موفقیت ایجاد شد', 'success');
                     navigate('/admin/campaigns');
+                } else {
+                    showToast(data.message || 'خطا در ذخیره کمپین', 'error');
+                }
+            } else {
+                // Handle validation errors
+                const errorData = await res.json();
+                if (res.status === 422 && errorData.errors) {
+                    // Show first validation error as toast
+                    const firstError = Object.values(errorData.errors)[0];
+                    if (firstError && firstError[0]) {
+                        showToast(firstError[0], 'error');
+                    } else {
+                        showToast(errorData.message || 'لطفاً خطاهای زیر را برطرف کنید', 'error');
+                    }
+                } else {
+                    showToast(errorData.message || 'خطا در ذخیره کمپین', 'error');
                 }
             }
         } catch (error) {
             console.error('Failed to save campaign:', error);
-            window.dispatchEvent(new CustomEvent('toast:show', { 
-                detail: { type: 'error', message: 'خطا در ذخیره کمپین' } 
-            }));
+            showToast('خطا در ذخیره کمپین', 'error');
         } finally {
             setLoading(false);
         }

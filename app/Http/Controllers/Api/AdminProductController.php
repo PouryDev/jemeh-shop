@@ -41,7 +41,7 @@ class AdminProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'price' => 'required|integer|min:0',
+            'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'has_variants' => 'boolean',
             'has_colors' => 'boolean',
@@ -50,12 +50,19 @@ class AdminProductController extends Controller
             'images.*' => 'sometimes|image|max:4096',
             'variants.*.color_id' => 'nullable|exists:colors,id',
             'variants.*.size_id' => 'nullable|exists:sizes,id',
-            'variants.*.price' => 'required|integer|min:0',
-            'variants.*.stock' => 'required|integer|min:0',
+            'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
         ]);
 
         $data['slug'] = Str::slug($data['title']) . '-' . Str::random(4);
+        
+        // Convert string values to proper types for FormData
+        $data['has_variants'] = $request->boolean('has_variants');
+        $data['has_colors'] = $request->boolean('has_colors');
+        $data['has_sizes'] = $request->boolean('has_sizes');
         $data['is_active'] = $request->boolean('is_active');
+        $data['price'] = (float) $data['price'];
+        $data['stock'] = (int) $data['stock'];
         
         $product = Product::create($data);
 
@@ -91,7 +98,7 @@ class AdminProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'price' => 'required|integer|min:0',
+            'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'has_variants' => 'boolean',
             'has_colors' => 'boolean',
@@ -101,11 +108,18 @@ class AdminProductController extends Controller
             'existing_images.*' => 'sometimes|integer|exists:product_images,id',
             'variants.*.color_id' => 'nullable|exists:colors,id',
             'variants.*.size_id' => 'nullable|exists:sizes,id',
-            'variants.*.price' => 'required|integer|min:0',
-            'variants.*.stock' => 'required|integer|min:0',
+            'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
         ]);
 
+        // Convert string values to proper types for FormData
+        $data['has_variants'] = $request->boolean('has_variants');
+        $data['has_colors'] = $request->boolean('has_colors');
+        $data['has_sizes'] = $request->boolean('has_sizes');
         $data['is_active'] = $request->boolean('is_active');
+        $data['price'] = (float) $data['price'];
+        $data['stock'] = (int) $data['stock'];
+        
         $product->update($data);
 
         // Handle images

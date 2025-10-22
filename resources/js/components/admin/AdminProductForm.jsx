@@ -4,6 +4,7 @@ import FileUpload from './FileUpload';
 import ModernSelect from './ModernSelect';
 import ModernCheckbox from './ModernCheckbox';
 import { apiRequest } from '../../utils/csrfToken';
+import { showToast } from '../../utils/toast';
 
 function AdminProductForm() {
     const navigate = useNavigate();
@@ -191,20 +192,29 @@ function AdminProductForm() {
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
-                    window.dispatchEvent(new CustomEvent('toast:show', { 
-                        detail: { 
-                            type: 'success', 
-                            message: isEdit ? 'محصول با موفقیت به‌روزرسانی شد' : 'محصول با موفقیت ایجاد شد' 
-                        } 
-                    }));
+                    showToast(isEdit ? 'محصول با موفقیت به‌روزرسانی شد' : 'محصول با موفقیت ایجاد شد', 'success');
                     navigate('/admin/products');
+                } else {
+                    showToast(data.message || 'خطا در ذخیره محصول', 'error');
+                }
+            } else {
+                // Handle validation errors
+                const errorData = await res.json();
+                if (res.status === 422 && errorData.errors) {
+                    // Show first validation error as toast
+                    const firstError = Object.values(errorData.errors)[0];
+                    if (firstError && firstError[0]) {
+                        showToast(firstError[0], 'error');
+                    } else {
+                        showToast(errorData.message || 'لطفاً خطاهای زیر را برطرف کنید', 'error');
+                    }
+                } else {
+                    showToast(errorData.message || 'خطا در ذخیره محصول', 'error');
                 }
             }
         } catch (error) {
             console.error('Failed to save product:', error);
-            window.dispatchEvent(new CustomEvent('toast:show', { 
-                detail: { type: 'error', message: 'خطا در ذخیره محصول' } 
-            }));
+            showToast('خطا در ذخیره محصول', 'error');
         } finally {
             setLoading(false);
         }
