@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
+import { apiRequest } from '../utils/sanctumAuth';
 import ProductModal from './ProductModal';
 
 function SearchDropdown({ onSearch, initialQuery = '' }) {
@@ -41,11 +42,7 @@ function SearchDropdown({ onSearch, initialQuery = '' }) {
 
         setLoading(true);
         try {
-            const response = await fetch(`/api/search/dropdown?q=${encodeURIComponent(searchQuery)}&limit=5`, {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
+            const response = await apiRequest(`/api/search/dropdown?q=${encodeURIComponent(searchQuery)}&limit=5`);
 
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -98,11 +95,7 @@ function SearchDropdown({ onSearch, initialQuery = '' }) {
         if (result.type === 'product') {
             // Fetch full product details using slug
             try {
-                const response = await fetch(`/api/products/${result.slug}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                const response = await apiRequest(`/api/products/${result.slug}`);
                 
                 if (response.ok) {
                     const data = await response.json();

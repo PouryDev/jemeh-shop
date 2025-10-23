@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiRequest } from '../utils/sanctumAuth';
 
 function CategoriesPage(){
     const [categories, setCategories] = React.useState([]);
@@ -10,7 +11,7 @@ function CategoriesPage(){
     React.useEffect(() => {
         (async () => {
             try {
-                const res = await fetch('/api/categories', { headers: { 'Accept': 'application/json' } });
+                const res = await apiRequest('/api/categories');
                 if (!res.ok) throw new Error('failed');
                 const data = await res.json();
                 setCategories(data.data || []);

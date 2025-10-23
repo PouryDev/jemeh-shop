@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ModernSelect from './ModernSelect';
 import ModernCheckbox from './ModernCheckbox';
-import { apiRequest } from '../../utils/csrfToken';
+import PersianDatePicker from './PersianDatePicker';
+import { apiRequest } from '../../utils/sanctumAuth';
+import { adminApiRequest } from '../../utils/adminApi';
 import { showToast } from '../../utils/toast';
+import { scrollToTop } from '../../utils/scrollToTop';
 
 function AdminDiscountForm() {
     const navigate = useNavigate();
@@ -30,15 +33,7 @@ function AdminDiscountForm() {
             const loadDiscount = async () => {
                 try {
                     setLoadingData(true);
-                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    
-                    const res = await fetch(`/api/admin/discount-codes/${id}`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': token || ''
-                        },
-                        credentials: 'same-origin'
-                    });
+                    const res = await adminApiRequest(`/discount-codes/${id}`);
 
                     if (res.ok) {
                         const data = await res.json();
@@ -97,6 +92,7 @@ function AdminDiscountForm() {
                 if (data.success) {
                     showToast(isEdit ? 'کد تخفیف با موفقیت به‌روزرسانی شد' : 'کد تخفیف با موفقیت ایجاد شد', 'success');
                     navigate('/admin/discounts');
+                    scrollToTop();
                 } else {
                     showToast(data.message || 'خطا در ذخیره کد تخفیف', 'error');
                 }
@@ -212,23 +208,19 @@ function AdminDiscountForm() {
 
                         <div>
                             <label className="block text-white font-medium mb-2">تاریخ شروع</label>
-                            <input
-                                type="date"
-                                name="starts_at"
+                            <PersianDatePicker
                                 value={form.starts_at}
-                                onChange={handleInputChange}
-                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                onChange={(value) => setForm(prev => ({ ...prev, starts_at: value }))}
+                                placeholder="تاریخ شروع را انتخاب کنید"
                             />
                         </div>
 
                         <div>
                             <label className="block text-white font-medium mb-2">تاریخ انقضا</label>
-                            <input
-                                type="date"
-                                name="expires_at"
+                            <PersianDatePicker
                                 value={form.expires_at}
-                                onChange={handleInputChange}
-                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                onChange={(value) => setForm(prev => ({ ...prev, expires_at: value }))}
+                                placeholder="تاریخ انقضا را انتخاب کنید"
                             />
                         </div>
 
@@ -330,7 +322,10 @@ function AdminDiscountForm() {
                 <div className="flex gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate('/admin/discounts')}
+                        onClick={() => {
+                            navigate('/admin/discounts');
+                            scrollToTop();
+                        }}
                         className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200"
                     >
                         انصراف

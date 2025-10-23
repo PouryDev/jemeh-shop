@@ -5,13 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class AddressController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $addresses = Auth::user()->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
+        $addresses = $request->user()->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
         
         return response()->json([
             'success' => true,
@@ -34,10 +33,10 @@ class AddressController extends Controller
 
         // If this is set as default, unset other defaults
         if ($request->boolean('is_default')) {
-            Auth::user()->addresses()->update(['is_default' => false]);
+            $request->user()->addresses()->update(['is_default' => false]);
         }
 
-        $address = Auth::user()->addresses()->create([
+        $address = $request->user()->addresses()->create([
             'title' => $request->title,
             'address' => $request->address,
             'postal_code' => $request->postal_code,
@@ -57,7 +56,7 @@ class AddressController extends Controller
     public function update(Request $request, Address $address)
     {
         // Ensure user owns this address
-        if ($address->user_id !== Auth::id()) {
+        if ($address->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -74,7 +73,7 @@ class AddressController extends Controller
 
         // If this is set as default, unset other defaults
         if ($request->boolean('is_default')) {
-            Auth::user()->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
+            $request->user()->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
         }
 
         $address->update([
@@ -94,10 +93,10 @@ class AddressController extends Controller
         ]);
     }
 
-    public function destroy(Address $address)
+    public function destroy(Request $request, Address $address)
     {
         // Ensure user owns this address
-        if ($address->user_id !== Auth::id()) {
+        if ($address->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -109,15 +108,15 @@ class AddressController extends Controller
         ]);
     }
 
-    public function setDefault(Address $address)
+    public function setDefault(Request $request, Address $address)
     {
         // Ensure user owns this address
-        if ($address->user_id !== Auth::id()) {
+        if ($address->user_id !== $request->user()->id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         // Unset other defaults
-        Auth::user()->addresses()->update(['is_default' => false]);
+        $request->user()->addresses()->update(['is_default' => false]);
         
         // Set this as default
         $address->update(['is_default' => true]);

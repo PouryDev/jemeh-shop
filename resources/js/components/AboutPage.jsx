@@ -18,7 +18,7 @@ function AboutPage(){
             'url': window.location.origin,
             'logo': window.location.origin + '/images/logo.png',
             'sameAs': [
-                'https://instagram.com/jemeh.shop',
+                'https://instagram.com/jemehshopp',
                 'https://t.me/jemeh_shop'
             ]
         };

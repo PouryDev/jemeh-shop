@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { apiRequest } from '../utils/sanctumAuth';
 
 function ProductPage() {
     const { slug } = useParams();
@@ -28,7 +29,7 @@ function ProductPage() {
     React.useEffect(() => {
         setLoading(true);
         setError(null);
-        fetch(`/api/products/${slug}`)
+        apiRequest(`/api/products/${slug}`)
             .then(async (res) => {
                 if (res.status === 404) {
                     navigate('/404', { replace: true });
@@ -162,20 +163,16 @@ function ProductPage() {
         setAdding(true);
         setAddStatus(null);
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const res = await fetch(`/cart/add/${product.slug}`, {
+            const res = await apiRequest(`/api/cart/add/${product.slug}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     quantity: Number(quantity) || 1,
                     color_id: selectedColorId || null,
                     size_id: selectedSizeId || null,
                 }),
-                credentials: 'same-origin',
             });
             if (!res.ok) throw new Error('failed');
             const payload = await res.json();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { apiRequest } from '../utils/sanctumAuth';
 import ProductCard from './ProductCard';
 import LoadingSpinner from './LoadingSpinner';
 import SearchDropdown from './SearchDropdown';
@@ -70,11 +71,7 @@ function ShopPage() {
             if (query) params.set('q', query);
             if (page > 1) params.set('page', page);
             
-            const response = await fetch(`/api/products?${params.toString()}`, {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
+            const response = await apiRequest(`/api/products?${params.toString()}`);
             
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -101,11 +98,7 @@ function ShopPage() {
     // Fetch campaigns
     const fetchCampaigns = useCallback(async () => {
         try {
-            const response = await fetch('/api/campaigns/active', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
+            const response = await apiRequest('/api/campaigns/active');
             
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -124,7 +117,7 @@ function ShopPage() {
     // Fetch categories
     const fetchCategories = useCallback(async () => {
         try {
-            const res = await fetch('/api/categories', { headers: { 'Accept': 'application/json' } });
+            const res = await apiRequest('/api/categories');
             if (!res.ok) throw new Error('failed');
             const data = await res.json();
             if (data.success) setCategories(data.data || []);
@@ -134,7 +127,7 @@ function ShopPage() {
     // Fetch best sellers (fallback to random if not available)
     const fetchBestSellers = useCallback(async () => {
         try {
-            const res = await fetch('/api/products?per_page=8&sort=random', { headers: { 'Accept': 'application/json' } });
+            const res = await apiRequest('/api/products?per_page=8&sort=random');
             if (!res.ok) throw new Error('failed');
             const data = await res.json();
             if (data.success) setBestSellers(data.data || []);
@@ -243,7 +236,7 @@ function ShopPage() {
             <section className="px-4 mb-8">
                 <div className="max-w-7xl mx-auto">
                     <a 
-                        href="https://instagram.com/jeme.shopp" 
+                        href="https://instagram.com/jemehshopp" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="block group"
@@ -259,7 +252,7 @@ function ShopPage() {
                                                 </svg>
                                             </div>
                                             <div>
-                                                <h3 className="text-white font-bold text-lg">jeme.shopp</h3>
+                                                <h3 className="text-white font-bold text-lg">jemehshopp</h3>
                                                 <p className="text-gray-300 text-sm">اینستاگرام رسمی</p>
                                             </div>
                                         </div>
@@ -424,7 +417,7 @@ function CategoryCarousel({ categoryId }) {
     React.useEffect(() => {
         (async () => {
             try {
-                const res = await fetch(`/api/products?per_page=10&category_id=${categoryId}`, { headers: { 'Accept': 'application/json' } });
+                const res = await apiRequest(`/api/products?per_page=10&category_id=${categoryId}`);
                 if (!res.ok) throw new Error('failed');
                 const data = await res.json();
                 if (data.success) setItems(data.data || []);

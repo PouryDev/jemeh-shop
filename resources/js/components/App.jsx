@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../contexts/AuthContext';
-import CsrfRefresher from './CsrfRefresher';
+import { CartProvider } from '../contexts/CartContext';
 import ShopPage from './ShopPage';
 import ProductPage from './ProductPage';
 import CartPage from './CartPage';
@@ -32,8 +32,8 @@ import ThanksPage from './ThanksPage';
 function App() {
     return (
         <AuthProvider>
-            <CsrfRefresher />
-            <Router>
+            <CartProvider>
+                <Router>
                 <Layout>
                     <Routes>
                     {/* Shop Routes */}
@@ -78,6 +78,7 @@ function App() {
                 </Routes>
             </Layout>
         </Router>
+            </CartProvider>
         </AuthProvider>
     );
 }

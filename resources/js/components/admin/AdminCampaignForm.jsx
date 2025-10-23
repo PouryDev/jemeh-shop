@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ModernCheckbox from './ModernCheckbox';
-import { apiRequest } from '../../utils/csrfToken';
+import PersianDatePicker from './PersianDatePicker';
+import { apiRequest } from '../../utils/sanctumAuth';
+import { adminApiRequest } from '../../utils/adminApi';
 import { showToast } from '../../utils/toast';
+import { scrollToTop } from '../../utils/scrollToTop';
 
 function AdminCampaignForm() {
     const navigate = useNavigate();
@@ -29,13 +32,8 @@ function AdminCampaignForm() {
         const loadData = async () => {
             try {
                 setLoadingData(true);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                
                 // Load products
-                const productsRes = await fetch('/api/admin/products', {
-                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': token || '' },
-                    credentials: 'same-origin'
-                });
+                const productsRes = await adminApiRequest('/products');
 
                 if (productsRes.ok) {
                     const data = await productsRes.json();
@@ -46,10 +44,7 @@ function AdminCampaignForm() {
 
                 // Load campaign data if editing
                 if (isEdit) {
-                    const campaignRes = await fetch(`/api/admin/campaigns/${id}`, {
-                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': token || '' },
-                        credentials: 'same-origin'
-                    });
+                    const campaignRes = await adminApiRequest(`/campaigns/${id}`);
 
                     if (campaignRes.ok) {
                         const data = await campaignRes.json();
@@ -126,6 +121,7 @@ function AdminCampaignForm() {
                 if (data.success) {
                     showToast(isEdit ? 'کمپین با موفقیت به‌روزرسانی شد' : 'کمپین با موفقیت ایجاد شد', 'success');
                     navigate('/admin/campaigns');
+                    scrollToTop();
                 } else {
                     showToast(data.message || 'خطا در ذخیره کمپین', 'error');
                 }
@@ -166,7 +162,7 @@ function AdminCampaignForm() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto relative">
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">
@@ -179,7 +175,7 @@ function AdminCampaignForm() {
 
             <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Basic Information */}
-                <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-6">
+                <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-6 relative z-10">
                     <h2 className="text-xl font-bold text-white mb-6">اطلاعات پایه</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -236,23 +232,19 @@ function AdminCampaignForm() {
 
                         <div>
                             <label className="block text-white font-medium mb-2">تاریخ شروع</label>
-                            <input
-                                type="date"
-                                name="starts_at"
+                            <PersianDatePicker
                                 value={form.starts_at}
-                                onChange={handleInputChange}
-                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                onChange={(value) => setForm(prev => ({ ...prev, starts_at: value }))}
+                                placeholder="تاریخ شروع را انتخاب کنید"
                             />
                         </div>
 
                         <div>
                             <label className="block text-white font-medium mb-2">تاریخ انقضا</label>
-                            <input
-                                type="date"
-                                name="expires_at"
+                            <PersianDatePicker
                                 value={form.expires_at}
-                                onChange={handleInputChange}
-                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                onChange={(value) => setForm(prev => ({ ...prev, expires_at: value }))}
+                                placeholder="تاریخ انقضا را انتخاب کنید"
                             />
                         </div>
                     </div>
@@ -271,7 +263,7 @@ function AdminCampaignForm() {
                 </div>
 
                 {/* Product Selection */}
-                <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-6">
+                <div className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-6 relative z-10">
                     <h2 className="text-xl font-bold text-white mb-6">انتخاب محصولات</h2>
                     
                     {/* Search */}
@@ -323,7 +315,7 @@ function AdminCampaignForm() {
                     {searchTerm && (
                         <div>
                             <h3 className="text-white font-medium mb-3">محصولات موجود</h3>
-                            <div className="max-h-60 overflow-y-auto space-y-2">
+                            <div className="max-h-60 overflow-y-auto space-y-2 relative z-0">
                                 {filteredProducts.map((product) => (
                                     <div key={product.id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between hover:bg-white/10 transition-colors">
                                         <div className="flex items-center space-x-3 space-x-reverse">
@@ -370,7 +362,10 @@ function AdminCampaignForm() {
                 <div className="flex gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate('/admin/campaigns')}
+                        onClick={() => {
+                            navigate('/admin/campaigns');
+                            scrollToTop();
+                        }}
                         className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200"
                     >
                         انصراف

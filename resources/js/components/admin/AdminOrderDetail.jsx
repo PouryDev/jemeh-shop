@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiRequest } from '../../utils/csrfToken';
+import { apiRequest } from '../../utils/sanctumAuth';
 
 function AdminOrderDetail() {
     const { id } = useParams();

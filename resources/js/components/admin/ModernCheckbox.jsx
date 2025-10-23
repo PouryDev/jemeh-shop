@@ -5,13 +5,15 @@ function ModernCheckbox({
     onChange, 
     label, 
     disabled = false,
-    className = ""
+    className = "",
+    name
 }) {
     return (
         <label className={`flex items-center space-x-3 space-x-reverse cursor-pointer group ${className}`}>
             <div className="relative">
                 <input
                     type="checkbox"
+                    name={name}
                     checked={checked}
                     onChange={onChange}
                     disabled={disabled}

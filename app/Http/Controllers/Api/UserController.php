@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function profile()
+    public function profile(Request $request)
     {
-        $user = auth()->user();
+        $user = $request->user();
         
         return response()->json([
             'success' => true,
@@ -25,7 +25,7 @@ class UserController extends Controller
             'instagram_id' => 'nullable|string|max:255',
         ]);
 
-        $user = auth()->user();
+        $user = $request->user();
         $user->update($request->only(['name', 'phone', 'instagram_id']));
 
         return response()->json([
@@ -35,9 +35,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function orders()
+    public function orders(Request $request)
     {
-        $orders = auth()->user()->orders()
+        $orders = $request->user()->orders()
             ->with(['items.product', 'items.variant'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -53,9 +53,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function stats()
+    public function stats(Request $request)
     {
-        $user = auth()->user();
+        $user = $request->user();
         
         // Total orders count
         $totalOrders = $user->orders()->count();

@@ -1,12 +1,12 @@
 /**
  * Admin API Request Utility
- * Handles CSRF token properly for admin API calls
+ * Handles Sanctum authentication for admin API calls
  */
 
-import { apiRequest } from './csrfToken';
+import { apiRequest } from './sanctumAuth';
 
 /**
- * Make admin API request with proper CSRF handling
+ * Make admin API request with proper Sanctum authentication
  * @param {string} url - Admin API endpoint (without /api/admin prefix)
  * @param {object} options - Fetch options
  * @returns {Promise<Response>} Fetch response
@@ -31,42 +31,43 @@ export async function adminApiRequest(url, options = {}) {
 }
 
 /**
- * Test CSRF token for admin
- * @returns {Promise<boolean>} True if CSRF token is valid
+ * Test Sanctum authentication for admin
+ * @returns {Promise<boolean>} True if authenticated
  */
-export async function testAdminCsrfToken() {
+export async function testAdminAuth() {
     try {
-        const response = await adminApiRequest('/csrf-test');
-        const data = await response.json();
+        const response = await adminApiRequest('/dashboard');
         
-        if (data.success) {
-            console.log('Admin CSRF token is valid');
+        if (response.ok) {
+            console.log('Admin authentication is valid');
             return true;
         } else {
-            console.error('Admin CSRF token test failed:', data);
+            console.error('Admin authentication test failed:', response.status);
             return false;
         }
     } catch (error) {
-        console.error('Admin CSRF token test error:', error);
+        console.error('Admin authentication test error:', error);
         return false;
     }
 }
 
 /**
- * Initialize admin API with CSRF token test
+ * Initialize admin API with authentication test
  * Call this when admin panel loads
  */
 export async function initializeAdminApi() {
     console.log('Initializing admin API...');
     
-    // Test CSRF token
-    const isValid = await testAdminCsrfToken();
+    // Test authentication
+    const isValid = await testAdminAuth();
     
     if (!isValid) {
-        console.warn('Admin CSRF token is not valid, attempting to refresh...');
-        // The apiRequest function will automatically handle CSRF token refresh
-        await testAdminCsrfToken();
+        console.warn('Admin authentication failed');
+        // Redirect to login or show error
+        window.location.href = '/admin/login';
+        return false;
     }
     
     console.log('Admin API initialized');
+    return true;
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest } from '../../utils/csrfToken';
+import { apiRequest } from '../../utils/sanctumAuth';
 
 function AdminDeliveryManagement() {
     const [deliveryMethods, setDeliveryMethods] = useState([]);

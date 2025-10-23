@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { convertPersianToEnglish } from '../utils/convertPersianNumbers';
-import { apiRequest } from '../utils/csrfToken';
+import { apiRequest } from '../utils/sanctumAuth';
 
 function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
     const { login } = useAuth();
@@ -9,7 +9,7 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState(null);
     const [errors, setErrors] = React.useState({});
-    const [loginForm, setLoginForm] = React.useState({ username: '', password: '' });
+    const [loginForm, setLoginForm] = React.useState({ login_field: '', password: '' });
     const [registerForm, setRegisterForm] = React.useState({ name: '', instagram_id: '', phone: '', password: '', password_confirmation: '' });
 
     React.useEffect(() => {
@@ -33,13 +33,13 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
         setErrors({});
         
         try {
-            const res = await apiRequest('/login', {
+            const res = await apiRequest('/api/auth/login', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    username: convertPersianToEnglish(loginForm.username),
+                    login_field: convertPersianToEnglish(loginForm.login_field),
                     password: loginForm.password
                 }),
             });
@@ -51,6 +51,7 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
             } else if (!res.ok || !data?.success) {
                 setError(data?.message || 'ورود ناموفق بود. لطفا اطلاعات را بررسی کنید.');
             } else {
+                // Token is already stored by apiRequest, just update user state
                 await login(data.user);
                 onSuccess?.(data.user);
                 onClose?.();
@@ -69,7 +70,7 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
         setErrors({});
         
         try {
-            const res = await apiRequest('/register', {
+            const res = await apiRequest('/api/auth/register', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
@@ -90,6 +91,7 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
             } else if (!res.ok || !data?.success) {
                 setError(data?.message || 'ثبت‌نام ناموفق بود.');
             } else {
+                // Token is already stored by apiRequest, just update user state
                 await login(data.user);
                 onSuccess?.(data.user);
                 onClose?.();
@@ -134,8 +136,8 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
                             <form onSubmit={handleLogin} className="space-y-3">
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">آیدی اینستاگرام یا شماره تلفن</label>
-                                    <input type="text" value={loginForm.username} onChange={(e)=>setLoginForm({...loginForm, username:convertPersianToEnglish(e.target.value)})} placeholder="@username یا 09123456789" required className={`w-full bg-white/5 border ${errors.username ? 'border-red-500' : 'border-white/10'} rounded-lg px-3 py-2 text-white`} />
-                                    {errors.username && <p className="text-red-400 text-xs mt-1">{errors.username[0]}</p>}
+                                    <input type="text" value={loginForm.login_field} onChange={(e)=>setLoginForm({...loginForm, login_field:convertPersianToEnglish(e.target.value)})} placeholder="@username یا 09123456789" required className={`w-full bg-white/5 border ${errors.login_field ? 'border-red-500' : 'border-white/10'} rounded-lg px-3 py-2 text-white`} />
+                                    {errors.login_field && <p className="text-red-400 text-xs mt-1">{errors.login_field[0]}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">رمز عبور</label>

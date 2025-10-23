@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { adminApiRequest } from '../../utils/adminApi';
 
 function AdminCampaignManagement() {
     const navigate = useNavigate();
@@ -10,15 +11,7 @@ function AdminCampaignManagement() {
         const loadCampaigns = async () => {
             try {
                 setLoading(true);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                
-                const res = await fetch('/api/admin/campaigns', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': token || ''
-                    },
-                    credentials: 'same-origin'
-                });
+                const res = await adminApiRequest('/campaigns');
                 
                 if (res.ok) {
                     const data = await res.json();
@@ -50,16 +43,7 @@ function AdminCampaignManagement() {
         }
 
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            const res = await fetch(`/api/admin/campaigns/${campaignId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
-                },
-                credentials: 'same-origin'
-            });
+            const res = await adminApiRequest(`/campaigns/${campaignId}`, { method: 'DELETE' });
 
             if (res.ok) {
                 setCampaigns(campaigns.filter(c => c.id !== campaignId));
@@ -77,16 +61,7 @@ function AdminCampaignManagement() {
 
     const toggleCampaignStatus = async (campaignId, currentStatus) => {
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            const res = await fetch(`/api/admin/campaigns/${campaignId}/toggle`, {
-                method: 'PATCH',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
-                },
-                credentials: 'same-origin'
-            });
+            const res = await adminApiRequest(`/campaigns/${campaignId}/toggle`, { method: 'PATCH' });
 
             if (res.ok) {
                 setCampaigns(campaigns.map(c => 

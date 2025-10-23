@@ -1,5 +1,5 @@
 import './bootstrap';
-import { apiRequest } from './utils/csrfToken';
+import { apiRequest } from './utils/api';
 
 // Toast minimal
 window.showToast = function(message, type = 'success'){
@@ -70,7 +70,7 @@ function updateCartUI(payload){
 // Initialize cart dropdown on load
 window.addEventListener('DOMContentLoaded', async ()=>{
   try {
-    const res = await apiRequest('/cart/json');
+    const res = await apiRequest('/api/cart/json');
     const data = await res.json();
     updateCartUI(data);
   } catch (err) {
@@ -78,16 +78,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   }
 });
 
-// Listen for cart updates from React components
-window.addEventListener('cart:update', async ()=>{
-  try {
-    const res = await apiRequest('/cart/json');
-    const data = await res.json();
-    updateCartUI(data);
-  } catch (err) {
-    console.error('Failed to update cart:', err);
-  }
-});
+// Note: cart:update event is now handled by CartContext to avoid duplicate requests
 
 // Live search for products (home page)
 document.addEventListener('input', async (e)=>{

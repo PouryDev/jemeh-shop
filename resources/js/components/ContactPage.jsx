@@ -28,8 +28,8 @@ function ContactPage(){
                         <a href="mailto:support@jemeh.shop" className="block rounded-lg bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition">
                             ایمیل: support@jemeh.shop
                         </a>
-                        <a href="https://instagram.com/jemeh.shop" target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition">
-                            اینستاگرام: @jemeh.shop
+                        <a href="https://instagram.com/jemehshopp" target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition">
+                            اینستاگرام: @jemehshopp
                         </a>
                     </div>
                 </section>

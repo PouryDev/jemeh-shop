@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { apiRequest } from '../utils/sanctumAuth';
 import ProductCard from './ProductCard';
 import LoadingSpinner from './LoadingSpinner';
 import { useSeo } from '../hooks/useSeo';
@@ -19,9 +20,7 @@ function CampaignPage() {
             const params = new URLSearchParams();
             if (page > 1) params.set('page', page);
             
-            const res = await fetch(`/api/campaigns/${id}/products?${params.toString()}`, {
-                headers: { 'Accept': 'application/json' }
-            });
+            const res = await apiRequest(`/api/campaigns/${id}/products?${params.toString()}`);
             
             if (!res.ok) {
                 if (res.status === 404) {

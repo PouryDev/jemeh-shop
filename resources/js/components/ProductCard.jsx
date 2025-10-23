@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import ProductModal from './ProductModal';
-import { apiRequest } from '../utils/csrfToken';
+import { apiRequest } from '../utils/sanctumAuth';
+import { useCart } from '../contexts/CartContext';
 
 function ProductCard({ product, index }) {
     const [isHovered, setIsHovered] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [qtyInCart, setQtyInCart] = useState(0);
+    const { getProductQuantity } = useCart();
 
     const handleCardClick = () => {
         setIsModalOpen(true);
@@ -15,33 +16,19 @@ function ProductCard({ product, index }) {
         try { return Number(value || 0).toLocaleString('fa-IR'); } catch { return value; }
     }
 
-    const refreshQtyFromAPI = async () => {
-        try {
-            const response = await apiRequest('/cart/json');
-            if (response.ok) {
-                const data = await response.json();
-                const items = data.items || [];
-                const qty = items.filter(it => String(it.id) === String(product.id)).reduce((s, it) => s + (it.quantity || 0), 0);
-                setQtyInCart(qty);
-            }
-        } catch (error) {
-            console.error('Failed to fetch cart quantity:', error);
-            setQtyInCart(0);
-        }
-    };
-
-    React.useEffect(() => {
-        refreshQtyFromAPI();
-        const onCartUpdate = () => refreshQtyFromAPI();
-        window.addEventListener('cart:update', onCartUpdate);
-        return () => window.removeEventListener('cart:update', onCartUpdate);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const qtyInCart = getProductQuantity(product.id);
 
     const increment = async (e) => {
         e.stopPropagation();
+        
+        // If product has variants, open modal instead of direct add to cart
+        if (product.has_variants || product.has_colors || product.has_sizes) {
+            setIsModalOpen(true);
+            return;
+        }
+        
         try {
-            const response = await apiRequest(`/cart/add/${product.slug}`, {
+            const response = await apiRequest(`/api/cart/add/${product.slug}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -53,7 +40,7 @@ function ProductCard({ product, index }) {
             if (data && data.ok) {
                 window.dispatchEvent(new Event('cart:update'));
                 window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', message: 'به سبد اضافه شد' } }));
-                refreshQtyFromAPI();
+                // Don't call refreshQtyFromAPI() here - let the cart:update event handle it
             }
         } catch (err) {
             console.error(err);
@@ -64,22 +51,22 @@ function ProductCard({ product, index }) {
         e.stopPropagation();
         try {
             // Fetch current cart to identify exact cart_key and quantity
-            const summary = await apiRequest('/cart/json');
+            const summary = await apiRequest('/api/cart/json');
             if (!summary.ok) throw new Error('failed');
             const payload = await summary.json();
             const items = payload.items || [];
-            const target = items.find((it) => String(it.id) === String(product.id));
+            const target = items.find((it) => String(it.product?.id) === String(product.id));
             if (!target) return; // nothing to do
 
             // Remove the current key completely
-            const removeRes = await apiRequest(`/cart/remove/${encodeURIComponent(target.cart_key)}`, {
+            const removeRes = await apiRequest(`/api/cart/remove/${encodeURIComponent(target.key)}`, {
                 method: 'DELETE'
             });
             if (!removeRes.ok) throw new Error('failed');
             let state = await removeRes.json();
             // Re-add with quantity - 1 if still >= 1
             if ((target.quantity || 0) - 1 > 0) {
-                const addRes = await apiRequest(`/cart/add/${product.slug}`, {
+                const addRes = await apiRequest(`/api/cart/add/${product.slug}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ quantity: (target.quantity - 1) })
@@ -89,7 +76,7 @@ function ProductCard({ product, index }) {
             }
             if (state && state.ok) {
                 window.dispatchEvent(new Event('cart:update'));
-                refreshQtyFromAPI();
+                // Don't call refreshQtyFromAPI() here - let the cart:update event handle it
             }
         } catch (err) {
             console.error(err);

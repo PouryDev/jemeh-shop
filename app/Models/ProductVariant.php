@@ -50,6 +50,41 @@ class ProductVariant extends Model
         return $this->belongsTo(Size::class);
     }
 
+    public function campaigns()
+    {
+        return $this->product->campaigns();
+    }
+
+    public function getActiveCampaignsAttribute()
+    {
+        return $this->product->active_campaigns;
+    }
+
+    public function getBestCampaignAttribute()
+    {
+        return $this->product->best_campaign;
+    }
+
+    public function getCampaignPriceAttribute()
+    {
+        $campaign = $this->best_campaign;
+        if (!$campaign) {
+            return $this->price;
+        }
+        
+        return $campaign->getDiscountPrice($this->price);
+    }
+
+    public function getCampaignDiscountAmountAttribute()
+    {
+        $campaign = $this->best_campaign;
+        if (!$campaign) {
+            return 0;
+        }
+        
+        return $campaign->calculateDiscount($this->price);
+    }
+
     public function getDisplayNameAttribute(): string
     {
         $parts = [];

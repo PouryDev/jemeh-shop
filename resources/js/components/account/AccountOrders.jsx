@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiRequest } from '../../utils/sanctumAuth';
 
 function AccountOrders() {
     const { user } = useAuth();
@@ -13,16 +14,7 @@ function AccountOrders() {
 
     const fetchOrders = async () => {
         try {
-            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            const res = await fetch('/api/orders', {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                credentials: 'same-origin',
-            });
-
+            const res = await apiRequest('/api/orders');
             if (res.ok) {
                 const data = await res.json();
                 setOrders(data.data || []);
@@ -54,6 +46,13 @@ function AccountOrders() {
             case 'cancelled': return 'لغو شده';
             default: return status;
         }
+    };
+
+    const getProductImageUrl = (product) => {
+        const path = product?.images?.[0]?.url || product?.images?.[0]?.path;
+        if (!path) return null;
+        if (/^https?:\/\//i.test(path)) return path;
+        return path.startsWith('/storage/') ? path : `/storage/${path}`;
     };
 
     if (loading) {
@@ -110,7 +109,7 @@ function AccountOrders() {
                                         </svg>
                                     </div>
                                     <div>
-                                        <h3 className="text-white font-semibold text-lg">سفارش #{order.order_number}</h3>
+                                        <h3 className="text-white font-semibold text-lg">سفارش #{order.order_number || order.id}</h3>
                                         <p className="text-gray-400 text-sm">
                                             {new Date(order.created_at).toLocaleDateString('fa-IR')}
                                         </p>
@@ -128,30 +127,34 @@ function AccountOrders() {
 
                             {/* Order Items */}
                             <div className="space-y-3 mb-4">
-                                {order.items?.map((item, index) => (
-                                    <div key={index} className="flex items-center space-x-4 space-x-reverse bg-white/5 rounded-xl p-3">
-                                        <div className="w-12 h-12 bg-gray-500/20 rounded-lg flex items-center justify-center">
-                                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
+                                {order.items?.map((item, index) => {
+                                    const imgUrl = getProductImageUrl(item.product);
+                                    return (
+                                        <div key={index} className="flex items-center space-x-4 space-x-reverse bg-white/5 rounded-xl p-3">
+                                            <div className="w-12 h-12 bg-gray-500/20 rounded-lg flex items-center justify-center overflow-hidden">
+                                                {imgUrl ? (
+                                                    <img src={imgUrl} alt={item.product?.title || 'Product'} className="w-12 h-12 object-cover" onError={(e)=>{ e.currentTarget.style.display='none'; }} />
+                                                ) : (
+                                                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-white font-medium">{item.product?.title || 'محصول'}</h4>
+                                                <p className="text-gray-400 text-sm">
+                                                    {item.quantity} عدد • {Number(item.unit_price || item.price || 0).toLocaleString('fa-IR')} تومان
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <h4 className="text-white font-medium">{item.product_name}</h4>
-                                            <p className="text-gray-400 text-sm">
-                                                {item.quantity} عدد • {item.price?.toLocaleString('fa-IR')} تومان
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Order Actions */}
                             <div className="flex items-center justify-between pt-4 border-t border-white/10">
                                 <div className="text-sm text-gray-400">
                                     <p>تعداد آیتم: {order.items?.length || 0}</p>
-                                    {order.delivery_method && (
-                                        <p>روش ارسال: {order.delivery_method.title}</p>
-                                    )}
                                 </div>
                                 <button
                                     onClick={() => setSelectedOrder(order)}
@@ -190,7 +193,7 @@ function AccountOrders() {
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <span className="text-gray-400">شماره سفارش:</span>
-                                            <span className="text-white mr-2">#{selectedOrder.order_number}</span>
+                                            <span className="text-white mr-2">#{selectedOrder.order_number || selectedOrder.id}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-400">تاریخ:</span>
@@ -207,27 +210,11 @@ function AccountOrders() {
                                         <div>
                                             <span className="text-gray-400">مبلغ کل:</span>
                                             <span className="text-white mr-2">
-                                                {selectedOrder.total_amount?.toLocaleString('fa-IR')} تومان
+                                                {Number(selectedOrder.total_amount || 0).toLocaleString('fa-IR')} تومان
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Delivery Info */}
-                                {selectedOrder.delivery_method && (
-                                    <div className="bg-white/5 rounded-xl p-4">
-                                        <h3 className="text-white font-semibold mb-2">اطلاعات ارسال</h3>
-                                        <div className="text-sm">
-                                            <p className="text-gray-400 mb-1">روش ارسال:</p>
-                                            <p className="text-white">{selectedOrder.delivery_method.title}</p>
-                                            {selectedOrder.delivery_fee > 0 && (
-                                                <p className="text-gray-400 mt-1">
-                                                    هزینه ارسال: {selectedOrder.delivery_fee.toLocaleString('fa-IR')} تومان
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>

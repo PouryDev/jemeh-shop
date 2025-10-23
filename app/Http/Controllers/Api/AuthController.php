@@ -29,12 +29,13 @@ class AuthController extends Controller
             ]);
         }
 
-        // Login user using session
-        Auth::login($user);
+        // Create Sanctum token
+        $token = $user->createToken('admin-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'user' => $user
+            'user' => $user,
+            'token' => $token
         ]);
     }
 
@@ -54,20 +55,20 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Login user using session
-        Auth::login($user);
+        // Create Sanctum token for new user
+        $token = $user->createToken('user-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'user' => $user
+            'user' => $user,
+            'token' => $token
         ], 201);
     }
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Revoke current token
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'success' => true,
@@ -77,7 +78,7 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user();
         
         if (!$user) {
             return response()->json([

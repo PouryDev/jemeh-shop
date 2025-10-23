@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import AddressModal from '../AddressModal';
-import { apiRequest } from '../../utils/csrfToken';
+import { apiRequest } from '../../utils/sanctumAuth';
 
 function AccountAddresses() {
     const { user } = useAuth();

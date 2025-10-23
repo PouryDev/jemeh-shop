@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { apiRequest } from '../utils/sanctumAuth';
 import ProductCard from './ProductCard';
 import LoadingSpinner from './LoadingSpinner';
 import { useSeo } from '../hooks/useSeo';
@@ -15,7 +16,7 @@ function CategoryPage() {
 
     const fetchCategory = useCallback(async () => {
         try {
-            const res = await fetch('/api/categories', { headers: { 'Accept': 'application/json' } });
+            const res = await apiRequest('/api/categories');
             if (!res.ok) throw new Error('failed');
             const data = await res.json();
             const cat = data.data?.find(c => c.id === Number(id));
@@ -36,9 +37,7 @@ function CategoryPage() {
             params.set('category_id', id);
             if (page > 1) params.set('page', page);
             
-            const res = await fetch(`/api/products?${params.toString()}`, {
-                headers: { 'Accept': 'application/json' }
-            });
+            const res = await apiRequest(`/api/products?${params.toString()}`);
             
             if (!res.ok) throw new Error('failed');
             const data = await res.json();

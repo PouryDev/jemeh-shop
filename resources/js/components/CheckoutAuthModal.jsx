@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiRequest } from '../utils/csrfToken';
+import { apiRequest } from '../utils/sanctumAuth';
 
 function CheckoutAuthModal({ open, onClose, onSuccess }) {
     const { login } = useAuth();
@@ -30,6 +30,7 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
             });
             const data = await res.json();
             if (!res.ok || !data?.success) throw new Error(data?.message || 'login-failed');
+            // Token is already stored by apiRequest, just update user state
             await login(data.user);
             onSuccess?.(data.user);
             onClose?.();
@@ -53,6 +54,7 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
             });
             const data = await res.json();
             if (!res.ok || !data?.success) throw new Error(data?.message || 'register-failed');
+            // Token is already stored by apiRequest, just update user state
             await login(data.user);
             onSuccess?.(data.user);
             onClose?.();

@@ -1,16 +1,29 @@
 // API utility functions for consistent error handling and authentication
 
+const getAuthToken = () => {
+    return localStorage.getItem('sanctum_auth_token');
+};
+
 export const apiRequest = async (url, options = {}) => {
+    const token = getAuthToken();
     const defaultHeaders = {
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        'X-Requested-With': 'XMLHttpRequest',
     };
 
+    if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
     const config = {
-        credentials: 'same-origin',
         headers: { ...defaultHeaders, ...options.headers },
         ...options
     };
+
+    // Don't set Content-Type for FormData - let browser set it with boundary
+    if (options.body instanceof FormData) {
+        delete config.headers['Content-Type'];
+    }
 
     try {
         const response = await fetch(url, config);
@@ -18,6 +31,8 @@ export const apiRequest = async (url, options = {}) => {
 
         if (!response.ok) {
             if (response.status === 401) {
+                // Clear token if unauthorized
+                localStorage.removeItem('sanctum_auth_token');
                 window.dispatchEvent(new CustomEvent('toast:show', { 
                     detail: { type: 'error', message: 'شما وارد نشده‌اید. لطفاً دوباره وارد شوید.' } 
                 }));

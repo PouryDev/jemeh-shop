@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { adminApiRequest } from '../../utils/adminApi';
 
 function AdminDiscountManagement() {
     const navigate = useNavigate();
@@ -10,15 +11,7 @@ function AdminDiscountManagement() {
         const loadDiscounts = async () => {
             try {
                 setLoading(true);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                
-                const res = await fetch('/api/admin/discount-codes', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': token || ''
-                    },
-                    credentials: 'same-origin'
-                });
+                const res = await adminApiRequest('/discount-codes');
                 
                 if (res.ok) {
                     const data = await res.json();
@@ -50,16 +43,7 @@ function AdminDiscountManagement() {
         }
 
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            const res = await fetch(`/api/admin/discount-codes/${discountId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
-                },
-                credentials: 'same-origin'
-            });
+            const res = await adminApiRequest(`/discount-codes/${discountId}`, { method: 'DELETE' });
 
             if (res.ok) {
                 setDiscounts(discounts.filter(d => d.id !== discountId));
@@ -77,16 +61,7 @@ function AdminDiscountManagement() {
 
     const toggleDiscountStatus = async (discountId, currentStatus) => {
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            const res = await fetch(`/api/admin/discount-codes/${discountId}/toggle`, {
-                method: 'PATCH',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
-                },
-                credentials: 'same-origin'
-            });
+            const res = await adminApiRequest(`/discount-codes/${discountId}/toggle`, { method: 'PATCH' });
 
             if (res.ok) {
                 setDiscounts(discounts.map(d => 

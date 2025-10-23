@@ -29,14 +29,10 @@ Route::get('/test-session', function () {
     ]);
 });
 
-// API routes for cart and checkout (these should work with React)
-Route::post('/cart/add/{product}', [CartController::class, 'add'])->name('cart.add');
-Route::delete('/cart/remove/{cartKey}', [CartController::class, 'remove'])->name('cart.remove');
-Route::get('/cart/json', [CartController::class, 'summary'])->name('cart.json');
+// React app routes
 Route::get('/checkout', function () {
     return view('react-app');
 })->name('checkout.index');
-Route::post('/checkout', [CheckoutController::class, 'place'])->name('checkout.place');
 Route::get('/account', function () {
     return view('react-app');
 })->name('account.index');
@@ -44,7 +40,7 @@ Route::get('/account/*', function () {
     return view('react-app');
 });
 
-// Auth routes
+// Auth routes (legacy - not used by React app)
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');

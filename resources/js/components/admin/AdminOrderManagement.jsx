@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { adminApiRequest } from '../../utils/adminApi';
 
 function AdminOrderManagement() {
     const navigate = useNavigate();
@@ -11,15 +12,7 @@ function AdminOrderManagement() {
         const loadOrders = async () => {
             try {
                 setLoading(true);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                
-                const res = await fetch('/api/admin/orders', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': token || ''
-                    },
-                    credentials: 'same-origin'
-                });
+                const res = await adminApiRequest('/orders');
                 
                 if (res.ok) {
                     const data = await res.json();
@@ -69,16 +62,9 @@ function AdminOrderManagement() {
 
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+            const res = await adminApiRequest(`/orders/${orderId}/status`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token || ''
-                },
-                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
 

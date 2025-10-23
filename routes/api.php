@@ -35,28 +35,6 @@ Route::get('/search', [ProductController::class, 'search']);
 // New search endpoint for dropdown
 Route::get('/search/dropdown', [SearchController::class, 'search']);
 
-// CSRF token refresh endpoint
-Route::get('/csrf-token', function () {
-    // Ensure session is started
-    if (!session()->isStarted()) {
-        session()->start();
-    }
-    
-    // Generate CSRF token
-    $token = csrf_token();
-    
-    // If token is null, try to regenerate it
-    if (!$token) {
-        $token = Str::random(40);
-        session()->put('_token', $token);
-    }
-    
-    return response()->json([
-        'success' => true,
-        'token' => $token
-    ]);
-});
-
 // Delivery methods (public - needed for checkout)
 Route::get('/delivery-methods', function () {
     $deliveryMethods = \App\Models\DeliveryMethod::active()->ordered()->get();
@@ -66,26 +44,38 @@ Route::get('/delivery-methods', function () {
     ]);
 });
 
-// Auth routes (using web middleware for session support)
-Route::middleware('web')->group(function () {
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth');
-    Route::get('/auth/user', [AuthController::class, 'user'])->middleware('auth');
+// Auth routes (public - no authentication required)
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/register', [AuthController::class, 'register']);
+
+// Cart routes (public - no authentication required) - with session support
+Route::middleware([
+    \App\Http\Middleware\EncryptCookies::class,
+    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+    \Illuminate\Session\Middleware\StartSession::class,
+])->group(function () {
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::get('/cart/json', [CartController::class, 'summary']);
+    Route::post('/cart/add/{product}', [CartController::class, 'add']);
+    Route::put('/cart/update', [CartController::class, 'update']);
+    Route::delete('/cart/remove/{cartKey}', [CartController::class, 'remove']);
+    Route::delete('/cart/clear', [CartController::class, 'clear']);
 });
 
-// Protected routes (using web middleware for session support)
-Route::middleware(['web', 'auth'])->group(function () {
-    // Cart routes
-    Route::get('/cart', [CartController::class, 'index']);
-    Route::post('/cart/add', [CartController::class, 'add']);
-    Route::put('/cart/update', [CartController::class, 'update']);
-    Route::delete('/cart/remove/{id}', [CartController::class, 'remove']);
-    Route::delete('/cart/clear', [CartController::class, 'clear']);
+// Protected routes (using Sanctum for authentication)
+Route::middleware('auth:sanctum')->group(function () {
+    // Auth routes that require authentication
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/user', [AuthController::class, 'user']);
     
     // Order routes
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/checkout', [OrderController::class, 'checkout'])->middleware([
+        \App\Http\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+    ]);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     
     // User profile routes
@@ -99,24 +89,14 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/addresses/{address}/set-default', [\App\Http\Controllers\Api\AddressController::class, 'setDefault']);
 });
 
-// Admin API routes - use web middleware but handle CSRF properly
-Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
-    // Test CSRF token endpoint
-    Route::get('/csrf-test', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'CSRF token is valid',
-            'token' => csrf_token(),
-            'session_id' => session()->getId(),
-        ]);
-    });
-    
+// Admin API routes - use Sanctum for authentication
+Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
     // Dashboard
     Route::get('/dashboard', [\App\Http\Controllers\Api\AdminDashboardController::class, 'index']);
     
     // Products
-        Route::apiResource('products', \App\Http\Controllers\Api\AdminProductController::class);
-        Route::delete('products/{product}/images/{image}', [\App\Http\Controllers\Api\AdminProductController::class, 'destroyImage']);
+    Route::apiResource('products', \App\Http\Controllers\Api\AdminProductController::class);
+    Route::delete('products/{product}/images/{image}', [\App\Http\Controllers\Api\AdminProductController::class, 'destroyImage']);
     
     // Categories, Colors, Sizes
     Route::get('/categories', function () {
@@ -209,13 +189,27 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class]
 
     // Discount Codes
     Route::get('/discount-codes', function () {
-        $discounts = \App\Models\DiscountCode::latest()->get();
+        $discounts = \App\Models\DiscountCode::latest()->get()->map(function ($discount) {
+            $discountData = $discount->toArray();
+            // Map min_order_amount to minimum_amount for frontend
+            if (isset($discountData['min_order_amount'])) {
+                $discountData['minimum_amount'] = $discountData['min_order_amount'];
+            }
+            return $discountData;
+        });
         return response()->json(['success' => true, 'data' => $discounts]);
     });
     
     Route::get('/discount-codes/{id}', function ($id) {
         $discount = \App\Models\DiscountCode::findOrFail($id);
-        return response()->json(['success' => true, 'data' => $discount]);
+        
+        // Map min_order_amount to minimum_amount for frontend
+        $discountData = $discount->toArray();
+        if (isset($discountData['min_order_amount'])) {
+            $discountData['minimum_amount'] = $discountData['min_order_amount'];
+        }
+        
+        return response()->json(['success' => true, 'data' => $discountData]);
     });
     
     Route::post('/discount-codes', function (\Illuminate\Http\Request $request) {
@@ -231,8 +225,21 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class]
             'is_active' => 'boolean'
         ]);
         
+        // Map minimum_amount to min_order_amount for database
+        if (isset($data['minimum_amount'])) {
+            $data['min_order_amount'] = $data['minimum_amount'];
+            unset($data['minimum_amount']);
+        }
+        
         $discount = \App\Models\DiscountCode::create($data);
-        return response()->json(['success' => true, 'data' => $discount]);
+        
+        // Map min_order_amount to minimum_amount for response
+        $discountData = $discount->toArray();
+        if (isset($discountData['min_order_amount'])) {
+            $discountData['minimum_amount'] = $discountData['min_order_amount'];
+        }
+        
+        return response()->json(['success' => true, 'data' => $discountData]);
     });
     
     Route::put('/discount-codes/{id}', function (\Illuminate\Http\Request $request, $id) {
@@ -249,8 +256,21 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class]
             'is_active' => 'boolean'
         ]);
         
+        // Map minimum_amount to min_order_amount for database
+        if (isset($data['minimum_amount'])) {
+            $data['min_order_amount'] = $data['minimum_amount'];
+            unset($data['minimum_amount']);
+        }
+        
         $discount->update($data);
-        return response()->json(['success' => true, 'data' => $discount]);
+        
+        // Map min_order_amount to minimum_amount for response
+        $discountData = $discount->fresh()->toArray();
+        if (isset($discountData['min_order_amount'])) {
+            $discountData['minimum_amount'] = $discountData['min_order_amount'];
+        }
+        
+        return response()->json(['success' => true, 'data' => $discountData]);
     });
     
     Route::delete('/discount-codes/{id}', function ($id) {
@@ -267,13 +287,27 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class]
     
     // Campaigns
     Route::get('/campaigns', function () {
-        $campaigns = \App\Models\Campaign::with('products')->latest()->get();
+        $campaigns = \App\Models\Campaign::with('products')->latest()->get()->map(function ($campaign) {
+            $campaignData = $campaign->toArray();
+            // Map database fields to frontend fields
+            $campaignData['title'] = $campaignData['name']; // Map name to title
+            $campaignData['discount_type'] = $campaignData['type']; // Map type to discount_type
+            $campaignData['expires_at'] = $campaignData['ends_at']; // Map ends_at to expires_at
+            return $campaignData;
+        });
         return response()->json(['success' => true, 'data' => $campaigns]);
     });
     
     Route::get('/campaigns/{id}', function ($id) {
         $campaign = \App\Models\Campaign::with('products')->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $campaign]);
+        
+        // Map database fields to frontend fields
+        $campaignData = $campaign->toArray();
+        $campaignData['title'] = $campaignData['name']; // Map name to title
+        $campaignData['discount_type'] = $campaignData['type']; // Map type to discount_type
+        $campaignData['expires_at'] = $campaignData['ends_at']; // Map ends_at to expires_at
+        
+        return response()->json(['success' => true, 'data' => $campaignData]);
     });
     
     Route::post('/campaigns', function (\Illuminate\Http\Request $request) {
@@ -289,7 +323,18 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class]
             'product_ids.*' => 'exists:products,id'
         ]);
         
-        $campaign = \App\Models\Campaign::create($data);
+        // Map frontend fields to database fields
+        $campaignData = [
+            'name' => $data['title'], // Map title to name
+            'description' => $data['description'],
+            'type' => $data['discount_type'], // Map discount_type to type
+            'discount_value' => $data['discount_value'],
+            'starts_at' => $data['starts_at'],
+            'ends_at' => $data['expires_at'], // Map expires_at to ends_at
+            'is_active' => $data['is_active'] ?? true,
+        ];
+        
+        $campaign = \App\Models\Campaign::create($campaignData);
         $campaign->products()->attach($data['product_ids']);
         
         return response()->json(['success' => true, 'data' => $campaign->load('products')]);
@@ -309,7 +354,18 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureUserIsAdmin::class]
             'product_ids.*' => 'exists:products,id'
         ]);
         
-        $campaign->update($data);
+        // Map frontend fields to database fields
+        $campaignData = [
+            'name' => $data['title'], // Map title to name
+            'description' => $data['description'],
+            'type' => $data['discount_type'], // Map discount_type to type
+            'discount_value' => $data['discount_value'],
+            'starts_at' => $data['starts_at'],
+            'ends_at' => $data['expires_at'], // Map expires_at to ends_at
+            'is_active' => $data['is_active'] ?? true,
+        ];
+        
+        $campaign->update($campaignData);
         $campaign->products()->sync($data['product_ids']);
         
         return response()->json(['success' => true, 'data' => $campaign->load('products')]);

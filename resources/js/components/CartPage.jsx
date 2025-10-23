@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { apiRequest } from '../utils/csrfToken';
+import { apiRequest } from '../utils/sanctumAuth';
+import VariantSelectorModal from './VariantSelectorModal';
 
 function CartPage() {
     const [loading, setLoading] = React.useState(true);
@@ -11,12 +12,13 @@ function CartPage() {
     const [totalDiscount, setTotalDiscount] = React.useState(0);
     const [count, setCount] = React.useState(0);
     const [removingKey, setRemovingKey] = React.useState(null);
+    const [variantModal, setVariantModal] = React.useState({ isOpen: false, product: null, quantity: 1 });
 
     const fetchCart = React.useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await apiRequest('/cart/json');
+            const res = await apiRequest('/api/cart/json');
             if (!res.ok) throw new Error('failed');
             const data = await res.json();
             setItems(data.items || []);
@@ -39,7 +41,7 @@ function CartPage() {
     async function handleRemove(cartKey) {
         setRemovingKey(cartKey);
         try {
-            const res = await apiRequest(`/cart/remove/${encodeURIComponent(cartKey)}`, {
+            const res = await apiRequest(`/api/cart/remove/${encodeURIComponent(cartKey)}`, {
                 method: 'DELETE',
             });
             if (!res.ok) throw new Error('failed');
@@ -58,18 +60,22 @@ function CartPage() {
     }
 
     async function decrementItem(item) {
-        setRemovingKey(item.cart_key);
+        setRemovingKey(item.key);
         try {
-            const removeRes = await apiRequest(`/cart/remove/${encodeURIComponent(item.cart_key)}`, {
+            const removeRes = await apiRequest(`/api/cart/remove/${encodeURIComponent(item.key)}`, {
                 method: 'DELETE',
             });
             if (!removeRes.ok) throw new Error('failed');
             let state = await removeRes.json();
             if ((item.quantity || 0) - 1 > 0) {
-                const addRes = await apiRequest(`/cart/add/${item.slug}`, {
+                const addRes = await apiRequest(`/api/cart/add/${item.slug}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ quantity: (item.quantity - 1) })
+                    body: JSON.stringify({ 
+                        quantity: (item.quantity - 1),
+                        color_id: item.color_id || null,
+                        size_id: item.size_id || null
+                    })
                 });
                 if (!addRes.ok) throw new Error('failed');
                 state = await addRes.json();
@@ -79,7 +85,7 @@ function CartPage() {
             setOriginalTotal(state.original_total || state.total || 0);
             setTotalDiscount(state.total_discount || 0);
             setCount(state.count || 0);
-            try { localStorage.setItem('cart', JSON.stringify(state.items || [])); } catch {}
+            try { localStorage.setItem('cart', JSON.stringify(state.items || [])); } catch { }
             window.dispatchEvent(new Event('cart:update'));
         } catch (e) {
         } finally {
@@ -88,23 +94,38 @@ function CartPage() {
     }
 
     async function incrementItem(item) {
-        setRemovingKey(item.cart_key);
+        setRemovingKey(item.key);
         try {
-            const res = await apiRequest(`/cart/add/${item.slug}`, {
+            const res = await apiRequest(`/api/cart/add/${item.slug}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quantity: 1 })
             });
-            if (!res.ok) throw new Error('failed');
+            
+            if (!res.ok) {
+                const errorData = await res.json();
+                // If it's a variant selection error, open variant modal
+                if (res.status === 400 && errorData.message?.includes('رنگ و سایز')) {
+                    setVariantModal({
+                        isOpen: true,
+                        product: item.product,
+                        quantity: item.quantity + 1
+                    });
+                    return;
+                }
+                throw new Error('failed');
+            }
+            
             const state = await res.json();
             setItems(state.items || []);
             setTotal(state.total || 0);
             setOriginalTotal(state.original_total || state.total || 0);
             setTotalDiscount(state.total_discount || 0);
             setCount(state.count || 0);
-            try { localStorage.setItem('cart', JSON.stringify(state.items || [])); } catch {}
+            try { localStorage.setItem('cart', JSON.stringify(state.items || [])); } catch { }
             window.dispatchEvent(new Event('cart:update'));
         } catch (e) {
+            console.error('Increment error:', e);
         } finally {
             setRemovingKey(null);
         }
@@ -145,13 +166,13 @@ function CartPage() {
                 ) : (
                     <div className="space-y-3">
                         {items.map((item) => (
-                            <div key={item.cart_key} className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                            <div key={item.key} className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
                                 <div className="flex items-center gap-3">
                                     {/* Product Image */}
                                     <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cherry-500/20 to-pink-500/20 flex items-center justify-center text-2xl flex-shrink-0">
                                         🛍️
                                     </div>
-                                    
+
                                     {/* Product Info */}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-semibold text-white text-sm leading-tight truncate">{item.title}</h3>
@@ -168,7 +189,7 @@ function CartPage() {
                                             <span className="text-xs text-cherry-400">{formatPrice(item.price)} تومان</span>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Price */}
                                     <div className="text-right">
                                         <div className="font-bold text-white text-sm">{formatPrice(item.total)} تومان</div>
@@ -177,14 +198,14 @@ function CartPage() {
                                         )}
                                     </div>
                                 </div>
-                                
+
                                 {/* Controls */}
                                 <div className="flex items-center justify-between mt-3">
                                     {/* Quantity Controls */}
                                     <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={() => decrementItem(item)} 
-                                            disabled={removingKey === item.cart_key} 
+                                        <button
+                                            onClick={() => decrementItem(item)}
+                                            disabled={removingKey === item.key}
                                             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm disabled:opacity-50 flex items-center justify-center"
                                         >
                                             −
@@ -192,27 +213,27 @@ function CartPage() {
                                         <div className="w-8 text-center text-white text-sm font-medium">
                                             {item.quantity}
                                         </div>
-                                        <button 
-                                            onClick={() => incrementItem(item)} 
-                                            disabled={removingKey === item.cart_key} 
+                                        <button
+                                            onClick={() => incrementItem(item)}
+                                            disabled={removingKey === item.key}
                                             className="w-8 h-8 rounded-full bg-cherry-600 hover:bg-cherry-500 text-white text-sm disabled:opacity-50 flex items-center justify-center"
                                         >
                                             +
                                         </button>
                                     </div>
-                                    
+
                                     {/* Remove Button */}
                                     <button
-                                        onClick={() => handleRemove(item.cart_key)}
-                                        disabled={removingKey === item.cart_key}
+                                        onClick={() => handleRemove(item.key)}
+                                        disabled={removingKey === item.key}
                                         className="text-red-400 hover:text-red-300 disabled:opacity-50 text-xs px-2 py-1 rounded-full hover:bg-red-400/10 transition-colors"
                                     >
-                                        {removingKey === item.cart_key ? 'حذف...' : 'حذف'}
+                                        {removingKey === item.key ? 'حذف...' : 'حذف'}
                                     </button>
                                 </div>
                             </div>
                         ))}
-                        
+
                         {/* Campaign Discount Summary */}
                         {totalDiscount > 0 && (
                             <div className="bg-green-500/10 backdrop-blur-sm rounded-2xl p-4 border border-green-500/20">
@@ -245,8 +266,8 @@ function CartPage() {
                                     <div className="text-xs text-gray-400">جمع کل</div>
                                     <div className="text-white font-bold text-lg">{formatPrice(total)} تومان</div>
                                 </div>
-                                <Link 
-                                    to="/checkout" 
+                                <Link
+                                    to="/checkout"
                                     className="bg-cherry-600 hover:bg-cherry-500 text-white rounded-2xl py-3 px-8 font-semibold transition-colors shadow-lg"
                                 >
                                     ادامه خرید
@@ -256,6 +277,17 @@ function CartPage() {
                     </div>
                 </div>
             )}
+            
+            {/* Variant Selector Modal */}
+            <VariantSelectorModal
+                product={variantModal.product}
+                isOpen={variantModal.isOpen}
+                onClose={() => setVariantModal({ isOpen: false, product: null, quantity: 1 })}
+                onSuccess={() => {
+                    fetchCart(); // Refresh cart after successful addition
+                }}
+                currentQuantity={variantModal.quantity}
+            />
         </div>
     );
 }

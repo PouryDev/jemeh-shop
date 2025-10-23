@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import FileUpload from './FileUpload';
 import ModernSelect from './ModernSelect';
 import ModernCheckbox from './ModernCheckbox';
-import { apiRequest } from '../../utils/csrfToken';
+import { apiRequest, debugTokenStatus } from '../../utils/sanctumAuth';
 import { showToast } from '../../utils/toast';
+import { scrollToTop } from '../../utils/scrollToTop';
 
 function AdminProductForm() {
     const navigate = useNavigate();
@@ -35,7 +36,6 @@ function AdminProductForm() {
         const loadData = async () => {
             try {
                 setLoadingData(true);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                 
                 // Load categories, colors, sizes
                 const [categoriesRes, colorsRes, sizesRes] = await Promise.all([
@@ -153,13 +153,45 @@ function AdminProductForm() {
         e.preventDefault();
         setLoading(true);
 
+        // Validate required fields
+        if (!form.title || !form.title.trim()) {
+            showToast('عنوان محصول الزامی است', 'error');
+            setLoading(false);
+            return;
+        }
+        
+        if (!form.price || form.price <= 0) {
+            showToast('قیمت محصول الزامی است', 'error');
+            setLoading(false);
+            return;
+        }
+        
+        if (!form.stock || form.stock < 0) {
+            showToast('موجودی محصول الزامی است', 'error');
+            setLoading(false);
+            return;
+        }
+
         try {
+            // Debug token status before making request
+            console.log('=== Before API Request ===');
+            debugTokenStatus();
+            console.log('========================');
+
             const formData = new FormData();
 
-            // Add form data
-            Object.keys(form).forEach(key => {
-                formData.append(key, form[key]);
-            });
+            // Add form data - ensure all required fields are properly set
+            formData.append('title', form.title.trim());
+            formData.append('description', form.description || '');
+            formData.append('price', form.price.toString());
+            formData.append('stock', form.stock.toString());
+            if (form.category_id) {
+                formData.append('category_id', String(form.category_id));
+            }
+            formData.append('is_active', form.is_active ? '1' : '0');
+            formData.append('has_variants', form.has_variants ? '1' : '0');
+            formData.append('has_colors', form.has_colors ? '1' : '0');
+            formData.append('has_sizes', form.has_sizes ? '1' : '0');
 
             // Add images
             const newImages = images.filter(img => img.isNew && img.file);
@@ -175,17 +207,26 @@ function AdminProductForm() {
 
             // Add variants
             variants.forEach((variant, index) => {
-                formData.append(`variants[${index}][color_id]`, variant.color_id);
-                formData.append(`variants[${index}][size_id]`, variant.size_id);
-                formData.append(`variants[${index}][price]`, variant.price);
-                formData.append(`variants[${index}][stock]`, variant.stock);
+                formData.append(`variants[${index}][color_id]`, variant.color_id || '');
+                formData.append(`variants[${index}][size_id]`, variant.size_id || '');
+                formData.append(`variants[${index}][price]`, variant.price || '0');
+                formData.append(`variants[${index}][stock]`, variant.stock || '0');
             });
 
+            // Debug: Log FormData contents
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+
             const url = isEdit ? `/api/admin/products/${id}` : '/api/admin/products';
-            const method = isEdit ? 'PUT' : 'POST';
+            // For Laravel, send multipart as POST + _method override to ensure fields/files are parsed
+            if (isEdit) {
+                formData.append('_method', 'PUT');
+            }
 
             const res = await apiRequest(url, {
-                method,
+                method: 'POST',
                 body: formData
             });
 
@@ -193,7 +234,35 @@ function AdminProductForm() {
                 const data = await res.json();
                 if (data.success) {
                     showToast(isEdit ? 'محصول با موفقیت به‌روزرسانی شد' : 'محصول با موفقیت ایجاد شد', 'success');
-                    navigate('/admin/products');
+                    // Stay on page for update (SPA UX) and refresh local state from server
+                    if (isEdit) {
+                        const product = data.data;
+                        setForm(prev => ({
+                            ...prev,
+                            title: product.title || prev.title,
+                            description: product.description || prev.description,
+                            price: product.price ?? prev.price,
+                            stock: product.stock ?? prev.stock,
+                            category_id: product.category_id ?? prev.category_id,
+                            is_active: product.is_active ?? prev.is_active,
+                            has_variants: product.has_variants ?? prev.has_variants,
+                            has_colors: product.has_colors ?? prev.has_colors,
+                            has_sizes: product.has_sizes ?? prev.has_sizes
+                        }));
+                        // Sync images/variants UI
+                        const existingImages = (product.images || []).map((img, index) => ({
+                            id: img.id || `existing-${index}`,
+                            url: img.url || (img.path ? (img.path.startsWith('http') ? img.path : `/storage/${img.path}`) : ''),
+                            isNew: false,
+                            preview: img.url || (img.path ? (img.path.startsWith('http') ? img.path : `/storage/${img.path}`) : '')
+                        }));
+                        setImages(existingImages);
+                        setVariants(product.variants || []);
+                    } else {
+                        // For create, redirect back to list
+                        navigate('/admin/products');
+                        scrollToTop();
+                    }
                 } else {
                     showToast(data.message || 'خطا در ذخیره محصول', 'error');
                 }
@@ -267,6 +336,7 @@ function AdminProductForm() {
                         <div>
                             <label className="block text-white font-medium mb-2">دسته‌بندی</label>
                             <ModernSelect
+                                name="category_id"
                                 options={[
                                     { value: '', label: 'انتخاب دسته‌بندی' },
                                     ...categories.map(category => ({
@@ -322,24 +392,28 @@ function AdminProductForm() {
 
                     <div className="mt-6 flex flex-wrap gap-6">
                         <ModernCheckbox
+                            name="is_active"
                             checked={form.is_active}
                             onChange={(e) => setForm(prev => ({ ...prev, is_active: e.target.checked }))}
                             label="فعال"
                         />
 
                         <ModernCheckbox
+                            name="has_variants"
                             checked={form.has_variants}
                             onChange={(e) => setForm(prev => ({ ...prev, has_variants: e.target.checked }))}
                             label="دارای تنوع"
                         />
 
                         <ModernCheckbox
+                            name="has_colors"
                             checked={form.has_colors}
                             onChange={(e) => setForm(prev => ({ ...prev, has_colors: e.target.checked }))}
                             label="دارای رنگ"
                         />
 
                         <ModernCheckbox
+                            name="has_sizes"
                             checked={form.has_sizes}
                             onChange={(e) => setForm(prev => ({ ...prev, has_sizes: e.target.checked }))}
                             label="دارای سایز"
@@ -382,6 +456,7 @@ function AdminProductForm() {
                                         <div>
                                             <label className="block text-white font-medium mb-2">رنگ</label>
                                             <ModernSelect
+                                                name={`variants[${index}][color_id]`}
                                                 options={[
                                                     { value: '', label: 'انتخاب رنگ' },
                                                     ...colors.map(color => ({
@@ -397,6 +472,7 @@ function AdminProductForm() {
                                         <div>
                                             <label className="block text-white font-medium mb-2">سایز</label>
                                             <ModernSelect
+                                                name={`variants[${index}][size_id]`}
                                                 options={[
                                                     { value: '', label: 'انتخاب سایز' },
                                                     ...sizes.map(size => ({
@@ -413,6 +489,7 @@ function AdminProductForm() {
                                             <label className="block text-white font-medium mb-2">قیمت</label>
                                             <input
                                                 type="number"
+                                                name={`variants[${index}][price]`}
                                                 value={variant.price}
                                                 onChange={(e) => updateVariant(index, 'price', e.target.value)}
                                                 min="0"
@@ -425,6 +502,7 @@ function AdminProductForm() {
                                                 <label className="block text-white font-medium mb-2">موجودی</label>
                                                 <input
                                                     type="number"
+                                                    name={`variants[${index}][stock]`}
                                                     value={variant.stock}
                                                     onChange={(e) => updateVariant(index, 'stock', e.target.value)}
                                                     min="0"
@@ -450,7 +528,10 @@ function AdminProductForm() {
                 <div className="flex gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate('/admin/products')}
+                        onClick={() => {
+                            navigate('/admin/products');
+                            scrollToTop();
+                        }}
                         className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200"
                     >
                         انصراف

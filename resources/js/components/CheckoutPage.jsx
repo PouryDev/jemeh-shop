@@ -4,7 +4,7 @@ import CheckoutAuthModal from './CheckoutAuthModal';
 import AddressDropdown from './AddressDropdown';
 import AddressModal from './AddressModal';
 import FileUpload from './FileUpload';
-import { apiRequest } from '../utils/csrfToken';
+import { apiRequest } from '../utils/sanctumAuth';
 import { showToast } from '../utils/toast';
 
 function CheckoutPage() {
@@ -88,7 +88,7 @@ function CheckoutPage() {
     const fetchCart = React.useCallback(async () => {
         setLoading(true);
         try {
-            const res = await apiRequest('/cart/json');
+            const res = await apiRequest('/api/cart/json');
             if (!res.ok) throw new Error('failed');
             const data = await res.json();
             setCart({ 
@@ -226,7 +226,7 @@ function CheckoutPage() {
                 formData.append('discount_code', form.discount_code);
             }
             
-            const res = await apiRequest('/checkout', {
+            const res = await apiRequest('/api/checkout', {
                 method: 'POST',
                 body: formData,
             });
@@ -255,8 +255,19 @@ function CheckoutPage() {
             if (data.success) {
                 // Show success toast
                 showToast('سفارش با موفقیت ثبت شد', 'success');
+                // Derive invoice id safely from response
+                const invoiceId = (
+                    (data.invoice && (data.invoice.id || data.invoice.invoice_id)) ||
+                    data.invoice_id ||
+                    data.invoiceNumber ||
+                    data.invoice_number ||
+                    (data.invoice && data.invoice.number) ||
+                    (data.order && data.order.id) ||
+                    data.id ||
+                    Date.now()
+                );
                 // Redirect to React SPA thanks page
-                window.location.href = `/thanks/${data.invoice.id}`;
+                window.location.href = `/thanks/${encodeURIComponent(invoiceId)}`;
             } else {
                 throw new Error(data.message || 'خطا در ثبت سفارش');
             }
@@ -312,7 +323,7 @@ function CheckoutPage() {
                             
                             <div className="p-4 space-y-3">
                                 {cart.items.map((item) => (
-                                    <div key={item.cart_key} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                                    <div key={item.key} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
                                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cherry-500/20 to-pink-500/20 flex items-center justify-center text-lg flex-shrink-0">
                                             🛍️
                                         </div>
@@ -582,30 +593,30 @@ function CheckoutPage() {
                                 </div>
                                 <div className="divide-y divide-white/10">
                                     {cart.items.map((item) => (
-                                        <div key={item.cart_key} className="p-3 md:p-4 flex items-start gap-3 md:gap-4">
+                                        <div key={item.key} className="p-3 md:p-4 flex items-start gap-3 md:gap-4">
                                             <div className="w-14 h-14 rounded bg-white/10 flex items-center justify-center">🧾</div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div>
-                                                        <div className="text-white font-semibold truncate max-w-[200px] md:max-w-none">{item.title}</div>
-                                                        {item.variant_display_name && (
-                                                            <div className="text-xs text-gray-300 mt-0.5">{item.variant_display_name}</div>
+                                                        <div className="text-white font-semibold truncate max-w-[200px] md:max-w-none">{item.product?.title}</div>
+                                                        {item.color_id && item.size_id && (
+                                                            <div className="text-xs text-gray-300 mt-0.5">رنگ: {item.color_id}, سایز: {item.size_id}</div>
                                                         )}
-                                                        {item.campaign && (
+                                                        {item.product?.campaign && (
                                                             <div className="text-xs text-green-400 mt-0.5 flex items-center gap-1">
                                                                 <span>🎉</span>
-                                                                <span>{item.campaign.name}</span>
+                                                                <span>{item.product.campaign.name}</span>
                                                             </div>
                                                         )}
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            {item.original_price && item.original_price !== item.price && (
-                                                                <span className="text-xs text-gray-500 line-through">{formatPrice(item.original_price)}</span>
+                                                            {item.product?.original_price && item.product.original_price !== item.product?.price && (
+                                                                <span className="text-xs text-gray-500 line-through">{formatPrice(item.product.original_price)}</span>
                                                             )}
-                                                            <span className="text-xs text-gray-400">{item.quantity} × {formatPrice(item.price)}</span>
+                                                            <span className="text-xs text-gray-400">{item.quantity} × {formatPrice(item.product?.price)}</span>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                    <div className="text-white font-bold text-sm md:text-base">{formatPrice(item.total)} تومان</div>
+                                                    <div className="text-white font-bold text-sm md:text-base">{formatPrice(item.quantity * item.product?.price)} تومان</div>
                                                         {item.total_discount > 0 && (
                                                             <div className="text-xs text-green-400">صرفه‌جویی: {formatPrice(item.total_discount)}</div>
                                                         )}

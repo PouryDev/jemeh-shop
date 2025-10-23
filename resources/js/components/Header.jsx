@@ -1,43 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 import CheckoutAuthModal from './CheckoutAuthModal';
 import SearchDropdown from './SearchDropdown';
 
 function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [cartCount, setCartCount] = useState(0);
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout, isAdmin } = useAuth();
+    const { cartData } = useCart();
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [authOpen, setAuthOpen] = useState(false);
 
     // Check if user is in account area
     const isInAccountArea = location.pathname.startsWith('/account');
-
-    // Get cart count from API
-    React.useEffect(() => {
-        const updateFromAPI = async () => {
-            try {
-                const res = await fetch('/cart/json', { 
-                    headers: { 'Accept': 'application/json' }, 
-                    credentials: 'same-origin' 
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setCartCount(data.count || 0);
-                }
-            } catch (error) {
-                console.error('Failed to fetch cart count:', error);
-            }
-        };
-        
-        updateFromAPI();
-        const onCartUpdate = () => updateFromAPI();
-        window.addEventListener('cart:update', onCartUpdate);
-        return () => window.removeEventListener('cart:update', onCartUpdate);
-    }, []);
 
 
     const toggleMenu = () => {
@@ -88,9 +66,9 @@ function Header() {
                             <svg className="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 10-8 0v4M5 9h14l-1 10a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
                             </svg>
-                            {cartCount > 0 && (
+                            {cartData.count > 0 && (
                                 <span className="absolute -top-1 -right-1 z-20 bg-gradient-to-r from-cherry-600 to-pink-600 text-white text-[10px] rounded-full h-5 min-w-5 px-1 flex items-center justify-center ring-1 ring-white/30 shadow">
-                                    {cartCount}
+                                    {cartData.count}
                                 </span>
                             )}
                         </Link>

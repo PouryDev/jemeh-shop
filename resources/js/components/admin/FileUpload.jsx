@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { apiRequest } from '../../utils/csrfToken';
+import { apiRequest } from '../../utils/sanctumAuth';
 
 function FileUpload({ 
     files = [], 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiRequest } from '../utils/csrfToken';
+import { apiRequest } from '../utils/sanctumAuth';
 
 function ProductModal({ product, isOpen, onClose }) {
     const navigate = useNavigate();
@@ -40,26 +40,8 @@ function ProductModal({ product, isOpen, onClose }) {
                 setSelectedColorId(null);
                 setSelectedSizeId(null);
                 
-                // Set initial selections after a brief delay
-                setTimeout(() => {
-                    if (data?.has_colors) {
-                        const availableColors = getAvailableColors(data);
-                        if (availableColors.length > 0) {
-                            setSelectedColorId(availableColors[0].id);
-                        }
-                    }
-                    if (data?.has_sizes) {
-                        const availableSizes = getAvailableSizes(data);
-                        if (availableSizes.length > 0) {
-                            setSelectedSizeId(availableSizes[0].id);
-                        }
-                    }
-                    
-                    // Update price after setting initial selections
-                    setTimeout(() => {
-                        updatePrice();
-                    }, 50);
-                }, 100);
+                // Don't set initial selections for products with variants
+                // User must explicitly select color and size
                 
                 setQuantity(1);
                 setAddStatus(null);
@@ -97,15 +79,19 @@ function ProductModal({ product, isOpen, onClose }) {
         const currentProduct = fullProduct || product;
         if (!currentProduct?.active_variants) return null;
         
-        // Find exact variant match
-        const variant = currentProduct.active_variants.find(v => {
-            const colorMatch = !currentProduct.has_colors || !selectedColorId || String(v.color_id) === String(selectedColorId);
-            const sizeMatch = !currentProduct.has_sizes || !selectedSizeId || String(v.size_id) === String(selectedSizeId);
+        // For products with variants, require exact match
+        if (currentProduct.has_variants || currentProduct.has_colors || currentProduct.has_sizes) {
+            const variant = currentProduct.active_variants.find(v => {
+                const colorMatch = !currentProduct.has_colors || (selectedColorId && String(v.color_id) === String(selectedColorId));
+                const sizeMatch = !currentProduct.has_sizes || (selectedSizeId && String(v.size_id) === String(selectedSizeId));
+                
+                return colorMatch && sizeMatch;
+            });
             
-            return colorMatch && sizeMatch;
-        });
+            return variant;
+        }
         
-        return variant;
+        return null;
     }
 
     function getAvailableColors(productData = null) {
@@ -128,6 +114,7 @@ function ProductModal({ product, isOpen, onClose }) {
         
         return Array.from(colors.values());
     }
+
 
     function getAvailableSizes(productData = null) {
         const currentProduct = productData || fullProduct || product;
@@ -180,8 +167,17 @@ function ProductModal({ product, isOpen, onClose }) {
 
     function getStockCount() {
         const currentProduct = fullProduct || product;
-        const variant = getSelectedVariant();
-        if (variant) return variant.stock;
+        
+        // For products with variants, require variant selection
+        if (currentProduct.has_variants || currentProduct.has_colors || currentProduct.has_sizes) {
+            const variant = getSelectedVariant();
+            if (!variant) {
+                return 0; // No stock if no variant selected
+            }
+            return variant.stock;
+        }
+        
+        // For products without variants, use main product stock
         return currentProduct.stock;
     }
 
@@ -200,8 +196,27 @@ function ProductModal({ product, isOpen, onClose }) {
             const currentProduct = fullProduct || product;
             const variant = getSelectedVariant();
             
-            // Always use product slug for the URL
-            const url = `/cart/add/${currentProduct.slug}`;
+            // Check if product has variants and require selection
+            if (currentProduct.has_variants || currentProduct.has_colors || currentProduct.has_sizes) {
+                // For products with variants, require color and size selection
+                if (currentProduct.has_colors && !selectedColorId) {
+                    setAddStatus('error');
+                    setTimeout(() => {
+                        setAddStatus(null);
+                    }, 3000);
+                    return;
+                }
+                if (currentProduct.has_sizes && !selectedSizeId) {
+                    setAddStatus('error');
+                    setTimeout(() => {
+                        setAddStatus(null);
+                    }, 3000);
+                    return;
+                }
+            }
+            
+            // Always use product slug for the URL (API route)
+            const url = `/api/cart/add/${currentProduct.slug}`;
             
             // Prepare request body with variant info
             const requestBody = {
@@ -402,6 +417,19 @@ function ProductModal({ product, isOpen, onClose }) {
                         {/* Title & Price */}
                         <div>
                             <h1 className="text-xl font-bold text-white mb-2">{currentProduct.title}</h1>
+                            
+                            {/* Category */}
+                            {currentProduct.category && (
+                                <div className="mb-2">
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600/20 text-blue-400 text-xs font-medium rounded-full border border-blue-500/30">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        {currentProduct.category.name}
+                                    </span>
+                                </div>
+                            )}
+                            
                             <div className="flex items-center gap-2">
                                 <span className="text-2xl font-bold text-cherry-400">
                                     {formatPrice(displayPrice)} تومان
@@ -544,7 +572,7 @@ function ProductModal({ product, isOpen, onClose }) {
                             ) : addStatus === 'success' ? (
                                 'افزوده شد!'
                             ) : addStatus === 'error' ? (
-                                'خطا! دوباره تلاش کنید'
+                                'لطفاً رنگ و سایز را انتخاب کنید'
                             ) : isOutOfStock ? (
                                 'ناموجود'
                             ) : (

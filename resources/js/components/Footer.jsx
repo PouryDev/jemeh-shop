@@ -17,7 +17,7 @@ function Footer() {
                         </p>
                         <div className="flex space-x-4">
                             <a 
-                                href="https://instagram.com/jeme.shopp" 
+                                href="https://instagram.com/jemehshopp" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-gray-400 hover:text-white transition-colors"

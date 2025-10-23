@@ -6,7 +6,8 @@ function ModernSelect({
     onChange, 
     placeholder = 'انتخاب کنید...',
     className = "",
-    disabled = false
+    disabled = false,
+    name
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +39,14 @@ function ModernSelect({
 
     return (
         <div className={`relative ${className}`} ref={selectRef}>
+            {/* Hidden input for form submission */}
+            {name && (
+                <input
+                    type="hidden"
+                    name={name}
+                    value={value || ''}
+                />
+            )}
             {/* Select Button */}
             <button
                 type="button"
