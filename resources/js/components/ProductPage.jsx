@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../utils/sanctumAuth';
+import { useSeo } from '../hooks/useSeo';
 
 function ProductPage() {
     const { slug } = useParams();
@@ -16,6 +17,15 @@ function ProductPage() {
     const [adding, setAdding] = React.useState(false);
     const [addStatus, setAddStatus] = React.useState(null);
     const [displayPrice, setDisplayPrice] = React.useState(null);
+
+    // SEO
+    useSeo({
+        title: product ? `${product.title} - جمه` : 'محصول - جمه',
+        description: product ? `${product.title} - ${product.description?.substring(0, 150)}...` : 'محصول با کیفیت از فروشگاه جمه',
+        keywords: product ? `${product.title}, لباس, جمه, خرید آنلاین` : 'لباس, خرید آنلاین',
+        image: product?.images?.[0]?.path ? resolveImageUrl(product.images[0].path) : '/images/logo.png',
+        canonical: window.location.origin + `/products/${slug}`
+    });
 
     function resolveImageUrl(path) {
         if (!path) return null;

@@ -10,17 +10,24 @@ function VariantSelectorModal({
 }) {
     const [selectedColorId, setSelectedColorId] = useState(null);
     const [selectedSizeId, setSelectedSizeId] = useState(null);
-    const [quantity, setQuantity] = useState(currentQuantity);
+    const [quantity, setQuantity] = useState(1); // Always start with 1
     const [adding, setAdding] = useState(false);
     const [addStatus, setAddStatus] = useState(null);
     const [fullProduct, setFullProduct] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [currentCartQuantity, setCurrentCartQuantity] = useState(0); // Track current cart quantity for selected variant
 
     useEffect(() => {
         if (isOpen && product) {
             fetchProductDetails();
         }
     }, [isOpen, product]);
+
+    // Update cart quantity when variant selection changes or modal opens
+    useEffect(() => {
+        const cartQuantity = getCurrentCartQuantityForVariant();
+        setCurrentCartQuantity(cartQuantity);
+    }, [selectedColorId, selectedSizeId, fullProduct, product, isOpen, currentQuantity]);
 
     async function fetchProductDetails() {
         if (!product?.slug) return;
@@ -37,8 +44,9 @@ function VariantSelectorModal({
                 // Reset selections
                 setSelectedColorId(null);
                 setSelectedSizeId(null);
-                setQuantity(currentQuantity);
+                setQuantity(1); // Always start with 1
                 setAddStatus(null);
+                // Don't reset currentCartQuantity here - let useEffect handle it
             }
         } catch (error) {
             console.error('Error fetching product details:', error);
@@ -81,6 +89,12 @@ function VariantSelectorModal({
         
         // For products without variants, use main product stock
         return currentProduct.stock;
+    }
+
+    function getCurrentCartQuantityForVariant() {
+        // For now, use the currentQuantity prop which represents the total for this product
+        // This is a simplified approach - in a real implementation you'd need to filter by variant
+        return currentQuantity || 0;
     }
 
     function getAvailableColors() {
@@ -233,8 +247,9 @@ function VariantSelectorModal({
 
     const currentProduct = fullProduct || product;
     const stock = getStockCount();
-    const maxQuantity = Math.min(stock, 10);
-    const isOutOfStock = stock <= 0;
+    const availableStock = Math.max(0, stock - currentCartQuantity);
+    const maxQuantity = Math.min(availableStock, 10);
+    const isOutOfStock = availableStock <= 0;
 
     return (
         <div 
@@ -371,7 +386,14 @@ function VariantSelectorModal({
                                     {isOutOfStock ? (
                                         <span className="text-red-400 text-sm">ناموجود</span>
                                     ) : (
-                                        <span className="text-gray-400 text-sm">{stock} عدد موجود</span>
+                                        <span className="text-gray-400 text-sm">
+                                            {stock} عدد موجود
+                                            {currentCartQuantity > 0 && (
+                                                <span className="text-xs text-gray-500">
+                                                    {' '}({currentCartQuantity} عدد در سبد)
+                                                </span>
+                                            )}
+                                        </span>
                                     )}
                                 </div>
                             </div>

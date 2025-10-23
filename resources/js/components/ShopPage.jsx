@@ -4,6 +4,7 @@ import { apiRequest } from '../utils/sanctumAuth';
 import ProductCard from './ProductCard';
 import LoadingSpinner from './LoadingSpinner';
 import SearchDropdown from './SearchDropdown';
+import { useSeo } from '../hooks/useSeo';
 
 function ShopPage() {
     const [products, setProducts] = useState([]);
@@ -16,6 +17,15 @@ function ShopPage() {
     const [bestSellers, setBestSellers] = useState([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+
+    // SEO
+    useSeo({
+        title: 'فروشگاه آنلاین لباس جمه - خرید لباس با کیفیت و استایل مینیمال',
+        description: 'فروشگاه آنلاین لباس جمه با تمرکز روی کیفیت، طراحی مینیمال و تجربه خرید آسان. تیشرت، هودی، شلوار و لباس‌های کاربردی با قیمت مناسب.',
+        keywords: 'فروشگاه لباس, خرید آنلاین لباس, تیشرت, هودی, شلوار, لباس مردانه, لباس زنانه, جمه',
+        image: '/images/logo.png',
+        canonical: window.location.origin + '/products'
+    });
 
     // Function to get emoji for category
     const getCategoryEmoji = (categoryName) => {

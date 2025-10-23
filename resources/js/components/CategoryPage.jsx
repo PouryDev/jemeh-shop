@@ -14,6 +14,15 @@ function CategoryPage() {
     const [hasMorePages, setHasMorePages] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
 
+    // SEO
+    useSeo({
+        title: category ? `${category.name} - جمه` : 'دسته‌بندی محصولات - جمه',
+        description: category ? `خرید ${category.name} با کیفیت از فروشگاه جمه. لباس‌های مینیمال و کاربردی با قیمت مناسب.` : 'دسته‌بندی محصولات فروشگاه جمه',
+        keywords: category ? `${category.name}, لباس, جمه, خرید آنلاین` : 'دسته‌بندی محصولات, لباس, جمه',
+        image: '/images/logo.png',
+        canonical: window.location.origin + `/categories/${id}`
+    });
+
     const fetchCategory = useCallback(async () => {
         try {
             const res = await apiRequest('/api/categories');
