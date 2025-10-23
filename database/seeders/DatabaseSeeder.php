@@ -55,6 +55,10 @@ class DatabaseSeeder extends Seeder
         // 10. Create Sample Orders
         $this->createSampleOrders();
 
+        // 11. Run Production Seeder (optional - comment out if not needed)
+        $this->command->info('🏭 Running Production Seeder...');
+        $this->call(ProductionSeeder::class);
+
         $this->command->info('✅ Database seeding completed successfully!');
     }
 
