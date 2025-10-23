@@ -46,6 +46,7 @@ class ProductionSeeder extends Seeder
             'سیلور' => '#C0C0C0',
             'برنجی' => '#CD7F32',
             'گلد' => '#FFD700',
+            'چری' => '#8B4513', // Brown color for چری
         ];
 
         $colorModels = [];
@@ -267,37 +268,55 @@ class ProductionSeeder extends Seeder
 
         foreach ($products as $productData) {
             // Create product
-            $product = Product::create([
-                'title' => $productData['name'],
-                'slug' => Str::slug($productData['name']),
-                'description' => $productData['description'],
-                'price' => $productData['price'],
-                'stock' => $productData['stock'],
-                'category_id' => $this->getCategoryId($productData['category']),
-                'is_active' => true,
-                'has_variants' => !empty($productData['variants']),
-                'has_colors' => $this->hasColors($productData['variants']),
-                'has_sizes' => $this->hasSizes($productData['variants']),
-            ]);
+            $product = Product::firstOrCreate(
+                ['slug' => Str::slug($productData['name'])],
+                [
+                    'title' => $productData['name'],
+                    'description' => $productData['description'],
+                    'price' => $productData['price'],
+                    'stock' => $productData['stock'],
+                    'category_id' => $this->getCategoryId($productData['category']),
+                    'is_active' => true,
+                    'has_variants' => !empty($productData['variants']),
+                    'has_colors' => $this->hasColors($productData['variants']),
+                    'has_sizes' => $this->hasSizes($productData['variants']),
+                ]
+            );
 
             // Create variants
             foreach ($productData['variants'] as $variantData) {
+                $sku = $this->generateSku($product, $variantData, $colorModels, $sizeModels);
+                
                 $variant = [
                     'product_id' => $product->id,
                     'stock' => $variantData['stock'],
                     'price' => $variantData['price'] ?? $product->price,
                     'is_active' => true,
+                    'sku' => $sku,
                 ];
 
+                $whereConditions = ['product_id' => $product->id];
+                
                 if ($variantData['color']) {
-                    $variant['color_id'] = $colorModels[$variantData['color']]->id;
+                    $colorId = $colorModels[$variantData['color']]->id;
+                    $variant['color_id'] = $colorId;
+                    $whereConditions['color_id'] = $colorId;
+                } else {
+                    $whereConditions['color_id'] = null;
                 }
 
                 if ($variantData['size']) {
-                    $variant['size_id'] = $sizeModels[$variantData['size']]->id;
+                    $sizeId = $sizeModels[$variantData['size']]->id;
+                    $variant['size_id'] = $sizeId;
+                    $whereConditions['size_id'] = $sizeId;
+                } else {
+                    $whereConditions['size_id'] = null;
                 }
 
-                ProductVariant::create($variant);
+                ProductVariant::firstOrCreate(
+                    $whereConditions,
+                    $variant
+                );
             }
         }
 
@@ -327,5 +346,42 @@ class ProductionSeeder extends Seeder
             }
         }
         return false;
+    }
+
+    private function generateSku($product, $variantData, $colorModels, $sizeModels)
+    {
+        // Generate SKU based on product slug and variant info
+        $sku = Str::slug($product->title);
+        
+        if ($variantData['color']) {
+            $colorName = $variantData['color'];
+            // Convert Persian color names to English equivalents
+            $colorMap = [
+                'مشکی' => 'black',
+                'صورتی' => 'pink',
+                'سبز' => 'green',
+                'نقره‌ای' => 'silver',
+                'سفید' => 'white',
+                'قرمز' => 'red',
+                'آبی' => 'blue',
+                'طلایی' => 'gold',
+                'سیلور' => 'silver',
+                'برنجی' => 'brass',
+                'گلد' => 'gold',
+                'چری' => 'brown',
+            ];
+            
+            $colorSlug = $colorMap[$colorName] ?? Str::slug($colorName);
+            $sku .= '-' . $colorSlug;
+        }
+        
+        if ($variantData['size']) {
+            $sku .= '-' . $variantData['size'];
+        }
+        
+        // Add random suffix to ensure uniqueness
+        $sku .= '-' . rand(100, 999);
+        
+        return $sku;
     }
 }
