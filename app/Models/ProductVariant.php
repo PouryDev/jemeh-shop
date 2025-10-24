@@ -154,6 +154,12 @@ class ProductVariant extends Model
             'نارنجی' => 'ORG',
             'زرد' => 'YLW',
             'قهوه‌ای' => 'BRN',
+            'طلایی' => 'GLD',
+            'سیلور' => 'SLV',
+            'نقره‌ای' => 'SLV',
+            'برنجی' => 'BRZ',
+            'گلد' => 'GLD',
+            'چری' => 'BRN',
         ];
         
         return $colorMap[$colorName] ?? strtoupper(substr($colorName, 0, 3));
