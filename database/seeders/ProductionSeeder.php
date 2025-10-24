@@ -385,3 +385,4 @@ class ProductionSeeder extends Seeder
         return $sku;
     }
 }
+ 
