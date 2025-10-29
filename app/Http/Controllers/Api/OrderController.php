@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Campaign;
+use App\Services\Telegram\Client as TelegramClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -205,6 +206,9 @@ class OrderController extends Controller
             return $order;
         });
 
+        // Send Telegram notification to admins
+        $this->sendOrderNotification($order);
+
         // Clear cart after successful order creation
         $request->session()->forget('cart');
 
@@ -235,5 +239,65 @@ class OrderController extends Controller
             'success' => true,
             'data' => $order
         ]);
+    }
+
+    /**
+     * Send Telegram notification when a new order is created
+     */
+    private function sendOrderNotification(Order $order): void
+    {
+        $adminChatId = config('telegram.admin_chat_id');
+        
+        if (!$adminChatId) {
+            logger()->warning('[TELEGRAM] Admin chat ID not configured, skipping notification');
+            return;
+        }
+
+        try {
+            // Load order relationships for message formatting
+            $order->load(['items.product', 'invoice']);
+            
+            // Format message in Persian
+            $itemsCount = $order->items->count();
+            $totalAmount = number_format($order->total_amount) . ' تومان';
+            $invoiceNumber = $order->invoice->invoice_number ?? 'N/A';
+            
+            $message = "🛒 سفارش جدید ثبت شد\n\n";
+            $message .= "📋 شماره سفارش: #{$order->id}\n";
+            $message .= "🧾 شماره فاکتور: {$invoiceNumber}\n";
+            $message .= "👤 نام مشتری: {$order->customer_name}\n";
+            $message .= "📞 تلفن: {$order->customer_phone}\n";
+            $message .= "📍 آدرس: {$order->customer_address}\n";
+            $message .= "📦 تعداد اقلام: {$itemsCount}\n";
+            $message .= "💰 مبلغ کل: {$totalAmount}\n";
+            $message .= "📊 وضعیت: " . $this->getStatusLabel($order->status) . "\n";
+            
+            if ($order->receipt_path) {
+                $message .= "📎 فایل رسید: دارد\n";
+            }
+
+            $telegramClient = new TelegramClient();
+            $telegramClient->sendMessage((int) $adminChatId, $message);
+        } catch (\Exception $e) {
+            // Log error but don't fail order creation
+            logger()->error('[OrderController][sendOrderNotification][TELEGRAM] Failed to send order notification', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Get Persian label for order status
+     */
+    private function getStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'pending' => 'در انتظار',
+            'confirmed' => 'تایید شده',
+            'shipped' => 'ارسال شده',
+            'cancelled' => 'لغو شده',
+            default => $status,
+        };
     }
 }
