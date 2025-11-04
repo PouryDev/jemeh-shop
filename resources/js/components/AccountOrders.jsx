@@ -105,7 +105,15 @@ function AccountOrders() {
                                         src={item.product_image || '/images/placeholder.jpg'} 
                                         alt={item.product_title}
                                         className="w-12 h-12 rounded object-cover"
-                                        onError={(e) => { e.target.src = '/images/placeholder.jpg'; }}
+                                        onError={(e) => {
+                                            const img = e.currentTarget;
+                                            if (img.src.includes('/images/placeholder.jpg') || img.dataset.placeholderTried === 'true') {
+                                                img.style.display = 'none';
+                                                return;
+                                            }
+                                            img.dataset.placeholderTried = 'true';
+                                            img.src = '/images/placeholder.jpg';
+                                        }}
                                     />
                                     <div className="flex-1 min-w-0">
                                         <div className="text-white text-sm truncate">{item.product_title}</div>

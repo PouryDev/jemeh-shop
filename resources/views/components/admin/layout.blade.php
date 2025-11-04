@@ -13,7 +13,7 @@
     </div>
 
     <div class="lg:hidden space-y-3 -mx-4 px-4 mb-4">
-        <div class="flex gap-2 overflow-auto no-scrollbar">
+        <div class="flex gap-2 overflow-x-auto overflow-y-hidden no-scrollbar">
             <a href="{{ route('admin.products.index') }}" class="shrink-0 rounded-full px-4 py-2 text-sm border {{ request()->routeIs('admin.products.*') ? 'border-cherry-600 bg-cherry-600/10' : 'border-white/10 bg-white/5 hover:border-cherry-600' }}">📦 محصولات</a>
             <a href="{{ route('admin.orders.index') }}" class="shrink-0 rounded-full px-4 py-2 text-sm border {{ request()->routeIs('admin.orders.*') ? 'border-cherry-600 bg-cherry-600/10' : 'border-white/10 bg-white/5 hover:border-cherry-600' }}">🧾 سفارش‌ها</a>
             <a href="/" class="shrink-0 rounded-full px-4 py-2 text-sm border border-white/10 bg-white/5 hover:border-cherry-600">🏪 فروشگاه</a>

@@ -240,7 +240,15 @@ function ProductPage() {
                     <div>
                         <div className="bg-black/30 rounded-lg p-4 border border-white/10">
                             {mainImage ? (
-                                <img src={mainImage} alt={product.title} className="w-full h-auto rounded" onError={(e) => { e.currentTarget.src = '/images/placeholder.jpg'; }} />
+                                <img src={mainImage} alt={product.title} className="w-full h-auto rounded" onError={(e) => {
+                                    const img = e.currentTarget;
+                                    if (img.src.includes('/images/placeholder.jpg') || img.dataset.placeholderTried === 'true') {
+                                        img.style.display = 'none';
+                                        return;
+                                    }
+                                    img.dataset.placeholderTried = 'true';
+                                    img.src = '/images/placeholder.jpg';
+                                }} />
                             ) : (
                                 <div className="w-full aspect-[4/3] bg-gray-800 rounded" />
                             )}
@@ -254,7 +262,15 @@ function ProductPage() {
                                             onClick={() => setMainImage(resolveImageUrl(img.path))}
                                             className={`flex-shrink-0 bg-black/30 rounded border ${mainImage === resolveImageUrl(img.path) ? 'border-cherry-500' : 'border-white/10'} p-1`}
                                         >
-                                            <img src={resolveImageUrl(img.path)} alt={product.title} className="w-16 h-16 object-cover rounded" onError={(e) => { e.currentTarget.src = '/images/placeholder.jpg'; }} />
+                                            <img src={resolveImageUrl(img.path)} alt={product.title} className="w-16 h-16 object-cover rounded" onError={(e) => {
+                                                const img = e.currentTarget;
+                                                if (img.src.includes('/images/placeholder.jpg') || img.dataset.placeholderTried === 'true') {
+                                                    img.style.display = 'none';
+                                                    return;
+                                                }
+                                                img.dataset.placeholderTried = 'true';
+                                                img.src = '/images/placeholder.jpg';
+                                            }} />
                                         </button>
                                     ))}
                                 </div>
@@ -265,7 +281,15 @@ function ProductPage() {
                                             onClick={() => setMainImage(resolveImageUrl(img.path))}
                                             className={`bg-black/30 rounded border ${mainImage === resolveImageUrl(img.path) ? 'border-cherry-500' : 'border-white/10'} p-1`}
                                         >
-                                            <img src={resolveImageUrl(img.path)} alt={product.title} className="w-full h-16 object-cover rounded" onError={(e) => { e.currentTarget.src = '/images/placeholder.jpg'; }} />
+                                            <img src={resolveImageUrl(img.path)} alt={product.title} className="w-full h-16 object-cover rounded" onError={(e) => {
+                                                const img = e.currentTarget;
+                                                if (img.src.includes('/images/placeholder.jpg') || img.dataset.placeholderTried === 'true') {
+                                                    img.style.display = 'none';
+                                                    return;
+                                                }
+                                                img.dataset.placeholderTried = 'true';
+                                                img.src = '/images/placeholder.jpg';
+                                            }} />
                                         </button>
                                     ))}
                                 </div>

@@ -147,7 +147,15 @@ function ProductCard({ product, index }) {
                     alt={product.title}
                     className="w-full aspect-square object-cover transition duration-300 group-hover:scale-[1.02]"
                     onError={(e) => {
-                        e.target.src = '/images/placeholder.jpg';
+                        const img = e.currentTarget;
+                        // If already trying placeholder or already tried it, hide the image
+                        if (img.src.includes('/images/placeholder.jpg') || img.dataset.placeholderTried === 'true') {
+                            img.style.display = 'none';
+                            return;
+                        }
+                        // Try placeholder once
+                        img.dataset.placeholderTried = 'true';
+                        img.src = '/images/placeholder.jpg';
                     }}
                 />
                 <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />

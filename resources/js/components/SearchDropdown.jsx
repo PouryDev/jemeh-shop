@@ -215,7 +215,13 @@ function SearchDropdown({ onSearch, initialQuery = '' }) {
                                                 alt={product.title}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
-                                                    e.target.src = '/images/placeholder.jpg';
+                                                    const img = e.currentTarget;
+                                                    if (img.src.includes('/images/placeholder.jpg') || img.dataset.placeholderTried === 'true') {
+                                                        img.style.display = 'none';
+                                                        return;
+                                                    }
+                                                    img.dataset.placeholderTried = 'true';
+                                                    img.src = '/images/placeholder.jpg';
                                                 }}
                                             />
                                         </div>
