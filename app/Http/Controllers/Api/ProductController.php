@@ -93,14 +93,18 @@ class ProductController extends Controller
                 ->selectRaw('MIN(COALESCE(pv.price, products.price))')
                 ->whereColumn('pv.product_id', 'products.id')
                 ->where('pv.is_active', true);
-            $query->orderByRaw('LEAST(products.price, COALESCE((' . $minVariantPriceSub->toSql() . '), products.price)) asc');
+            $subSql = $minVariantPriceSub->toSql();
+            $bindings = $minVariantPriceSub->getBindings();
+            $query->orderByRaw('LEAST(products.price, COALESCE((' . $subSql . '), products.price)) asc', $bindings);
         } elseif ($sort === 'priciest') {
             // Order by max price considering variants
             $maxVariantPriceSub = \DB::table('product_variants as pv')
                 ->selectRaw('MAX(COALESCE(pv.price, products.price))')
                 ->whereColumn('pv.product_id', 'products.id')
                 ->where('pv.is_active', true);
-            $query->orderByRaw('GREATEST(products.price, COALESCE((' . $maxVariantPriceSub->toSql() . '), products.price)) desc');
+            $subSql = $maxVariantPriceSub->toSql();
+            $bindings = $maxVariantPriceSub->getBindings();
+            $query->orderByRaw('GREATEST(products.price, COALESCE((' . $subSql . '), products.price)) desc', $bindings);
         } elseif ($sort === 'best_seller') {
             // Order by sold quantity aggregated from order_items
             $soldSub = \DB::table('order_items as oi')
