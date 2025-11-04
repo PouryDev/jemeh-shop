@@ -16,6 +16,18 @@
         window.__USER__ = @json(auth()->user());
     </script>
 
+    <!-- Unregister Service Worker in development -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('Service Worker unregistered');
+                }
+            });
+        }
+    </script>
+
     <!-- Scripts -->
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/react-app.jsx'])

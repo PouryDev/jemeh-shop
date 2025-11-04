@@ -46,7 +46,7 @@ function ShippingPage() {
                         {/* Shipping Costs */}
                         <section className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
                             <h2 className="text-xl font-bold text-white mb-4">هزینه ارسال</h2>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto overflow-y-hidden">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b border-white/10">

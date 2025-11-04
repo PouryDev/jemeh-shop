@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
 import ShopPage from './ShopPage';
+import ProductsPage from './ProductsPage';
 import ProductPage from './ProductPage';
 import CartPage from './CartPage';
 import CheckoutPage from './CheckoutPage';
@@ -44,7 +45,7 @@ function App() {
                         <Routes>
                         {/* Shop Routes */}
                         <Route path="/" element={<ShopPage />} />
-                        <Route path="/products" element={<ShopPage />} />
+                        <Route path="/products" element={<ProductsPage />} />
                         <Route path="/product/:slug" element={<ProductPage />} />
                         <Route path="/category/:id" element={<CategoryPage />} />
                         <Route path="/categories" element={<CategoriesPage />} />

@@ -121,7 +121,7 @@ function AccountInvoice() {
                     </div>
 
                     {/* Items Table */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto overflow-y-hidden">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-white/10">

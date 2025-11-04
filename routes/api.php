@@ -28,6 +28,15 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/campaigns/active', [CampaignController::class, 'active']);
 Route::get('/categories', [CategoryController::class, 'index']);
+// Public colors and sizes for filters
+Route::get('/colors', function () {
+    $colors = \App\Models\Color::where('is_active', true)->orderBy('name')->get();
+    return response()->json(['success' => true, 'data' => $colors]);
+});
+Route::get('/sizes', function () {
+    $sizes = \App\Models\Size::where('is_active', true)->orderBy('name')->get();
+    return response()->json(['success' => true, 'data' => $sizes]);
+});
 
 // Search endpoint for React
 Route::get('/search', [ProductController::class, 'search']);

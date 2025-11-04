@@ -12,6 +12,37 @@ function ProductCard({ product, index }) {
         setIsModalOpen(true);
     };
 
+    // Handle touch events to allow vertical scrolling when dragging on card
+    const handleTouchStart = (e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        
+        const startX = touch.clientX;
+        const startY = touch.clientY;
+        let hasStoppedPropagation = false;
+        
+        const handleTouchMove = (moveEvent) => {
+            if (moveEvent.touches.length !== 1) return;
+            const moveTouch = moveEvent.touches[0];
+            const deltaX = Math.abs(moveTouch.clientX - startX);
+            const deltaY = Math.abs(moveTouch.clientY - startY);
+            
+            // If vertical movement is dominant, stop propagation to carousel
+            if (deltaY > deltaX && deltaY > 5 && !hasStoppedPropagation) {
+                moveEvent.stopPropagation();
+                hasStoppedPropagation = true;
+            }
+        };
+        
+        const handleTouchEnd = () => {
+            document.removeEventListener('touchmove', handleTouchMove, { passive: false });
+            document.removeEventListener('touchend', handleTouchEnd);
+        };
+        
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+    };
+
     function formatPriceFa(value) {
         try { return Number(value || 0).toLocaleString('fa-IR'); } catch { return value; }
     }
@@ -92,11 +123,13 @@ function ProductCard({ product, index }) {
                 style={{ 
                     animationDelay: `${index * 100}ms`,
                     opacity: 1,
-                    transform: 'translateY(0)'
+                    transform: 'translateY(0)',
+                    touchAction: 'pan-y'
                 }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleCardClick}
+                onTouchStart={handleTouchStart}
             >
             {/* Campaign Badge */}
             {product.campaigns && product.campaigns.length > 0 && (

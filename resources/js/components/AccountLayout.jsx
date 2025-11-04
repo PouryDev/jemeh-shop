@@ -35,7 +35,7 @@ function AccountLayout() {
                 {/* Mobile Horizontal Tabs */}
                 <div className="md:hidden mb-6">
                     <div className="glass-card rounded-2xl p-2 border border-white/10">
-                        <nav className="flex gap-2 overflow-x-auto scrollbar-hide">
+                        <nav className="flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide">
                             {menuItems.map((item) => (
                                 <NavLink
                                     key={item.path}
