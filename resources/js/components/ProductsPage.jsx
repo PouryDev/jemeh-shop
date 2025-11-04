@@ -25,8 +25,10 @@ function ProductsPage() {
     const q = searchParams.get('q') || '';
     const minPrice = searchParams.get('min_price') || '';
     const maxPrice = searchParams.get('max_price') || '';
-    const selectedColors = (searchParams.get('colors') || '').split(',').filter(Boolean);
-    const selectedSizes = (searchParams.get('sizes') || '').split(',').filter(Boolean);
+    const colorsParam = searchParams.get('colors') || '';
+    const sizesParam = searchParams.get('sizes') || '';
+    const selectedColors = colorsParam.split(',').filter(Boolean);
+    const selectedSizes = sizesParam.split(',').filter(Boolean);
 
     const updateParam = (key, value) => {
         const next = new URLSearchParams(searchParams);
@@ -72,7 +74,7 @@ function ProductsPage() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [q, categoryId, minPrice, maxPrice, selectedColors, selectedSizes, sort]);
+    }, [q, categoryId, minPrice, maxPrice, colorsParam, sizesParam, sort]);
 
     const loadMore = () => {
         if (!loadingMore && hasMorePages) {
