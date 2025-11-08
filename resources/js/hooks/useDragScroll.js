@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 
 function useDragScroll(ref, { draggingClass = 'is-dragging' } = {}) {
+    const element = ref?.current;
+
     useEffect(() => {
-        const element = ref?.current;
         if (!element) return;
 
         let isDragging = false;
@@ -72,7 +73,7 @@ function useDragScroll(ref, { draggingClass = 'is-dragging' } = {}) {
             element.removeEventListener('pointercancel', onPointerCancel);
             element.removeEventListener('pointerleave', onPointerLeave);
         };
-    }, [ref, draggingClass]);
+    }, [element, draggingClass]);
 }
 
 export default useDragScroll;
