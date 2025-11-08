@@ -18,13 +18,10 @@ function ShopPage() {
     const [bestSellers, setBestSellers] = useState([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
-    const categoriesCarouselRef = useRef(null);
-    const bestSellersCarouselRef = useRef(null);
-    const campaignsCarouselRef = useRef(null);
 
-    useDragScroll(categoriesCarouselRef);
-    useDragScroll(bestSellersCarouselRef);
-    useDragScroll(campaignsCarouselRef);
+    const categoriesCarouselRef = useDragScroll();
+    const bestSellersCarouselRef = useDragScroll();
+    const campaignsCarouselRef = useDragScroll();
 
     // SEO
     useSeo({
@@ -220,12 +217,12 @@ function ShopPage() {
             {categories.length > 0 && (
                 <section className="px-4 py-4">
                     <div className="max-w-7xl mx-auto">
-                        <div ref={categoriesCarouselRef} className="flex gap-2 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div ref={categoriesCarouselRef} className="flex gap-2 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
                             {categories.map((category) => (
                                 <Link
                                     key={category.id}
                                     to={`/category/${category.id}`}
-                                    className="snap-start shrink-0 flex-none"
+                                    className="shrink-0 flex-none"
                                 >
                                     <div className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full px-4 py-2 transition-all duration-200 min-w-fit">
                                         <span className="text-lg">{getCategoryEmoji(category.name)}</span>
@@ -251,9 +248,9 @@ function ShopPage() {
                 <section className="px-4 mb-8">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-white font-bold text-lg mb-4">محبوب‌ترین‌ها</h2>
-                        <div ref={bestSellersCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div ref={bestSellersCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" style={{ WebkitOverflowScrolling: 'touch' }}>
                             {bestSellers.map((p, i) => (
-                                <div key={p.id} className="snap-start w-[200px] sm:w-72 shrink-0 flex-none">
+                                <div key={p.id} className="w-[200px] sm:w-72 shrink-0 flex-none">
                                     <ProductCard product={p} index={i} />
                                 </div>
                             ))}
@@ -339,9 +336,9 @@ function ShopPage() {
                 <section className="px-4 mb-10">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-white font-bold text-lg mb-4">کمپین‌ها</h2>
-                        <div ref={campaignsCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div ref={campaignsCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" style={{ WebkitOverflowScrolling: 'touch' }}>
                             {campaigns.map((campaign) => (
-                                <div key={campaign.id} className="snap-start w-[320px] sm:w-96 shrink-0 flex-none">
+                                <div key={campaign.id} className="w-[320px] sm:w-96 shrink-0 flex-none">
                                     <BannerCard campaign={campaign} />
                                 </div>
                             ))}
@@ -444,8 +441,7 @@ export default ShopPage;
 // Category carousel that fetches products by category
 function CategoryCarousel({ categoryId }) {
     const [items, setItems] = React.useState([]);
-    const containerRef = React.useRef(null);
-    useDragScroll(containerRef);
+    const containerRef = useDragScroll();
     React.useEffect(() => {
         (async () => {
             try {
@@ -467,9 +463,9 @@ function CategoryCarousel({ categoryId }) {
     };
 
     return (
-        <div ref={containerRef} className="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div ref={containerRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
             {items.map((p, i) => (
-                <div key={p.id} className="snap-start w-[200px] sm:w-72 shrink-0 flex-none">
+                <div key={p.id} className="w-[200px] sm:w-72 shrink-0 flex-none">
                     <ProductCard product={p} index={i} />
                 </div>
             ))}
