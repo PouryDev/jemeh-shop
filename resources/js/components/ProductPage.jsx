@@ -103,14 +103,7 @@ function ProductPage() {
         return Array.from(map.values());
     }
 
-    // Helper: only allow horizontal scrolling on carousels, ignore vertical scroll
-    const handleHorizontalScrollerWheel = (e) => {
-        const isHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
-        if (!isHorizontalIntent) {
-            e.stopPropagation();
-            return;
-        }
-    };
+    
 
     function filteredColors() {
         if (!product?.has_colors) return [];
@@ -255,7 +248,7 @@ function ProductPage() {
                         </div>
                         {product?.images?.length > 1 && (
                             <div className="mt-4">
-                                <div className="flex md:hidden gap-3 overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+                                <div className="flex md:hidden gap-3 overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                                     {product.images.map((img, idx) => (
                                         <button
                                             key={idx}

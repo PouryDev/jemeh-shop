@@ -82,16 +82,7 @@ function ProductsPage() {
         }
     };
 
-    // Helper: only allow horizontal scrolling on carousels, ignore vertical scroll
-    const handleHorizontalScrollerWheel = (e) => {
-        const isHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
-        if (!isHorizontalIntent) {
-            // Ignore vertical scroll completely - don't prevent default, just stop propagation
-            e.stopPropagation();
-            return;
-        }
-        // Allow horizontal scroll
-    };
+    
 
 
     React.useEffect(() => {
@@ -143,7 +134,7 @@ function ProductsPage() {
                 </div>
                 {/* Sort segmented */}
                 <div className="px-4 pb-3">
-                    <div className="flex gap-2 overflow-x-auto overflow-y-hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="flex gap-2 overflow-x-auto overflow-y-hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                         <SortButton value="newest" label="جدیدترین" />
                         <SortButton value="best_seller" label="پرفروش" />
                         <SortButton value="cheapest" label="ارزان‌ترین" />
@@ -153,7 +144,7 @@ function ProductsPage() {
                 {/* Category chips */}
                 {categories.length > 0 && (
                     <div className="px-4 pb-3">
-                        <div className="flex gap-2 overflow-x-auto overflow-y-hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div className="flex gap-2 overflow-x-auto overflow-y-hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                             <button
                                 className={`px-3 py-1 rounded-full text-sm border ${!categoryId ? 'bg-white/10 border-white/20' : 'border-white/10'}`}
                                 onClick={() => updateParam('category_id', '')}

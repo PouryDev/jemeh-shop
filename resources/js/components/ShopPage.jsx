@@ -172,16 +172,7 @@ function ShopPage() {
         }
     };
 
-    // Helper: only allow horizontal scrolling on carousels, ignore vertical scroll
-    const handleHorizontalScrollerWheel = (e) => {
-        const isHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
-        if (!isHorizontalIntent) {
-            // Ignore vertical scroll completely - don't prevent default, just stop propagation
-            e.stopPropagation();
-            return;
-        }
-        // Allow horizontal scroll
-    };
+    
 
 
     // Handle search from URL on initial load
@@ -217,7 +208,7 @@ function ShopPage() {
             {categories.length > 0 && (
                 <section className="px-4 py-4">
                     <div className="max-w-7xl mx-auto">
-                        <div ref={categoriesCarouselRef} className="flex gap-2 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div ref={categoriesCarouselRef} className="flex gap-2 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                             {categories.map((category) => (
                                 <Link
                                     key={category.id}
@@ -248,7 +239,7 @@ function ShopPage() {
                 <section className="px-4 mb-8">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-white font-bold text-lg mb-4">محبوب‌ترین‌ها</h2>
-                        <div ref={bestSellersCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div ref={bestSellersCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                             {bestSellers.map((p, i) => (
                                 <div key={p.id} className="w-[200px] sm:w-72 shrink-0 flex-none">
                                     <ProductCard product={p} index={i} />
@@ -336,7 +327,7 @@ function ShopPage() {
                 <section className="px-4 mb-10">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-white font-bold text-lg mb-4">کمپین‌ها</h2>
-                        <div ref={campaignsCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        <div ref={campaignsCarouselRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                             {campaigns.map((campaign) => (
                                 <div key={campaign.id} className="w-[320px] sm:w-96 shrink-0 flex-none">
                                     <BannerCard campaign={campaign} />
@@ -453,17 +444,10 @@ function CategoryCarousel({ categoryId }) {
         })();
     }, [categoryId]);
 
-    // Helper: only allow horizontal scrolling on carousels, ignore vertical scroll
-    const handleHorizontalScrollerWheel = (e) => {
-        const isHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
-        if (!isHorizontalIntent) {
-            e.stopPropagation();
-            return;
-        }
-    };
+    
 
     return (
-        <div ref={containerRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div ref={containerRef} className="flex gap-3 overflow-x-auto overflow-y-hidden pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
             {items.map((p, i) => (
                 <div key={p.id} className="w-[200px] sm:w-72 shrink-0 flex-none">
                     <ProductCard product={p} index={i} />

@@ -65,14 +65,7 @@ function ProductModal({ product, isOpen, onClose }) {
         return `/storage/${path}`;
     }
 
-    // Helper: only allow horizontal scrolling on carousels, ignore vertical scroll
-    const handleHorizontalScrollerWheel = (e) => {
-        const isHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey;
-        if (!isHorizontalIntent) {
-            e.stopPropagation();
-            return;
-        }
-    };
+    
 
 
     function getAvailableVariants() {
@@ -398,7 +391,7 @@ function ProductModal({ product, isOpen, onClose }) {
                         {/* Image Gallery */}
                         {currentProduct.images && currentProduct.images.length > 1 && (
                             <div className="absolute bottom-4 left-4 right-4">
-                                <div className="flex gap-2 overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x]" onWheel={handleHorizontalScrollerWheel} style={{ WebkitOverflowScrolling: 'touch' }}>
+                                <div className="flex gap-2 overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                                     {currentProduct.images.slice(0, 5).map((img, index) => (
                                         <button
                                             key={index}
