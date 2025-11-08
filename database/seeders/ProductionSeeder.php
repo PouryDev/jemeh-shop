@@ -47,6 +47,15 @@ class ProductionSeeder extends Seeder
             'برنجی' => '#CD7F32',
             'گلد' => '#FFD700',
             'چری' => '#8B4513', // Brown color for چری
+            'پلنگی' => '#C19A6B',
+            'جیوه ای' => '#B0B0B0',
+            'کرم' => '#FBE7B2',
+            'توپ فوتبال' => '#2E8B57',
+            'توپ فوتبال با کفش' => '#556B2F',
+            'توپ والیبال' => '#1E90FF',
+            'بارسا' => '#A50044',
+            'رئال' => '#FEBE10',
+            'بسکتبال' => '#FF8C00',
         ];
 
         $colorModels = [];
@@ -264,6 +273,72 @@ class ProductionSeeder extends Seeder
                     ['color' => 'چری', 'size' => '33', 'price' => 1380000, 'stock' => 6],
                 ]
             ],
+            [
+                'name' => 'عینک طبی',
+                'category' => 'اکسسوری',
+                'price' => 680000,
+                'stock' => 3,
+                'description' => 'عینک با شیشه طبی جنس عالی',
+                'variants' => []
+            ],
+            [
+                'name' => 'عینک میومیو',
+                'category' => 'اکسسوری',
+                'price' => 480000,
+                'stock' => 5,
+                'description' => 'عینک میومیو شیشه عادی',
+                'variants' => [
+                    ['color' => 'مشکی', 'size' => null, 'price' => 480000, 'stock' => 5],
+                    ['color' => 'پلنگی', 'size' => null, 'price' => 480000, 'stock' => 5],
+                    ['color' => 'کرم', 'size' => null, 'price' => 480000, 'stock' => 5],
+                ]
+            ],
+            [
+                'name' => 'عینک بالنسیاگا',
+                'category' => 'اکسسوری',
+                'price' => 380000,
+                'stock' => 3,
+                'description' => 'بدون توضیحات',
+                'variants' => [
+                    ['color' => 'مشکی', 'size' => null, 'price' => 380000, 'stock' => 3],
+                    ['color' => 'جیوه ای', 'size' => null, 'price' => 380000, 'stock' => 3],
+                ]
+            ],
+            [
+                'name' => 'گردنبند توپی',
+                'category' => 'اکسسوری',
+                'price' => 220000,
+                'stock' => 3,
+                'description' => 'گردنبند توپ فوتبال',
+                'variants' => [
+                    ['color' => 'توپ فوتبال', 'size' => null, 'price' => 220000, 'stock' => 3],
+                    ['color' => 'توپ فوتبال با کفش', 'size' => null, 'price' => 220000, 'stock' => 3],
+                    ['color' => 'توپ والیبال', 'size' => null, 'price' => 220000, 'stock' => 3],
+                ]
+            ],
+            [
+                'name' => 'عینک سلین',
+                'category' => 'اکسسوری',
+                'price' => 460000,
+                'stock' => 3,
+                'description' => 'عینک سلین شیشه یو وی',
+                'variants' => [
+                    ['color' => 'مشکی', 'size' => null, 'price' => 460000, 'stock' => 2],
+                    ['color' => 'طلایی', 'size' => null, 'price' => 460000, 'stock' => 1],
+                ]
+            ],
+            [
+                'name' => 'ست توپ با چارم',
+                'category' => 'اکسسوری',
+                'price' => 830000,
+                'stock' => 2,
+                'description' => 'بدون توضیحات',
+                'variants' => [
+                    ['color' => 'بارسا', 'size' => null, 'price' => 830000, 'stock' => 1],
+                    ['color' => 'رئال', 'size' => null, 'price' => 830000, 'stock' => 1],
+                    ['color' => 'بسکتبال', 'size' => null, 'price' => 830000, 'stock' => 0],
+                ]
+            ],
         ];
 
         foreach ($products as $productData) {
@@ -369,6 +444,15 @@ class ProductionSeeder extends Seeder
                 'برنجی' => 'brass',
                 'گلد' => 'gold',
                 'چری' => 'brown',
+                'پلنگی' => 'leopard',
+                'جیوه ای' => 'mercury',
+                'کرم' => 'cream',
+                'توپ فوتبال' => 'football',
+                'توپ فوتبال با کفش' => 'football-shoe',
+                'توپ والیبال' => 'volleyball',
+                'بارسا' => 'barca',
+                'رئال' => 'real',
+                'بسکتبال' => 'basketball',
             ];
             
             $colorSlug = $colorMap[$colorName] ?? Str::slug($colorName);
