@@ -35,14 +35,27 @@ function ProductModal({ product, isOpen, onClose }) {
                 // Set initial image
                 const firstImage = data?.images?.[0]?.path ? resolveImageUrl(data.images[0].path) : null;
                 setMainImage(firstImage);
-                
-                // Reset selections
-                setSelectedColorId(null);
-                setSelectedSizeId(null);
-                
-                // Don't set initial selections for products with variants
-                // User must explicitly select color and size
-                
+                // Auto-select first in-stock variant if available
+                try {
+                    const variants = Array.isArray(data?.active_variants) ? data.active_variants : (Array.isArray(data?.activeVariants) ? data.activeVariants : []);
+                    const firstInStock = variants.find(v => (v?.stock || 0) > 0);
+                    if (firstInStock) {
+                        if (data?.has_colors && firstInStock.color_id != null) {
+                            setSelectedColorId(firstInStock.color_id);
+                        }
+                        if (data?.has_sizes && firstInStock.size_id != null) {
+                            setSelectedSizeId(firstInStock.size_id);
+                        }
+                    } else {
+                        // No in-stock variants: keep nulls
+                        setSelectedColorId(null);
+                        setSelectedSizeId(null);
+                    }
+                } catch {
+                    // Fallback: keep nulls if anything goes wrong
+                    setSelectedColorId(null);
+                    setSelectedSizeId(null);
+                }
                 setQuantity(1);
                 setAddStatus(null);
             }
@@ -53,6 +66,25 @@ function ProductModal({ product, isOpen, onClose }) {
             const firstImage = product?.images?.[0]?.path ? resolveImageUrl(product.images[0].path) : null;
             setMainImage(firstImage);
             setDisplayPrice(product.price);
+            // Auto-select first in-stock variant from basic product if available
+            try {
+                const variants = Array.isArray(product?.active_variants) ? product.active_variants : (Array.isArray(product?.activeVariants) ? product.activeVariants : []);
+                const firstInStock = variants.find(v => (v?.stock || 0) > 0);
+                if (firstInStock) {
+                    if (product?.has_colors && firstInStock.color_id != null) {
+                        setSelectedColorId(firstInStock.color_id);
+                    }
+                    if (product?.has_sizes && firstInStock.size_id != null) {
+                        setSelectedSizeId(firstInStock.size_id);
+                    }
+                } else {
+                    setSelectedColorId(null);
+                    setSelectedSizeId(null);
+                }
+            } catch {
+                setSelectedColorId(null);
+                setSelectedSizeId(null);
+            }
         } finally {
             setLoading(false);
         }
