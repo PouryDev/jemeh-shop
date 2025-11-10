@@ -7,6 +7,13 @@ import FileUpload from './FileUpload';
 import { apiRequest } from '../utils/sanctumAuth';
 import { showToast } from '../utils/toast';
 
+const PAYMENT_CARD = {
+    number: '6037991553211859',
+    holder: 'مرضیه جعفرنژاد قمی',
+};
+
+const FORMATTED_PAYMENT_CARD_NUMBER = PAYMENT_CARD.number.replace(/(.{4})/g, '$1 ').trim();
+
 function CheckoutPage() {
     const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = React.useState(true);
@@ -29,6 +36,7 @@ function CheckoutPage() {
     const [discountInfo, setDiscountInfo] = React.useState(null);
     const [deliveryMethods, setDeliveryMethods] = React.useState([]);
     const [selectedDeliveryMethod, setSelectedDeliveryMethod] = React.useState(null);
+    const [copyingCard, setCopyingCard] = React.useState(false);
 
     const formatPrice = (v) => {
         try { return Number(v || 0).toLocaleString('fa-IR'); } catch { return v; }
@@ -175,6 +183,39 @@ function CheckoutPage() {
         setSelectedDeliveryMethod(method);
         setForm((prev) => ({ ...prev, delivery_method_id: methodId }));
     };
+
+    const handleCopyCardNumber = React.useCallback(async () => {
+        if (copyingCard) return;
+        setCopyingCard(true);
+        const rawNumber = PAYMENT_CARD.number.replace(/\s+/g, '');
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(rawNumber);
+            } else {
+                throw new Error('Clipboard API unavailable');
+            }
+            showToast('شماره کارت کپی شد', 'success');
+        } catch (err) {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = rawNumber;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (!successful) throw new Error('Copy command failed');
+                showToast('شماره کارت کپی شد', 'success');
+            } catch (fallbackErr) {
+                console.error('Failed to copy card number:', fallbackErr);
+                showToast('امکان کپی خودکار وجود ندارد؛ لطفاً دستی کپی کنید', 'error');
+            }
+        } finally {
+            setTimeout(() => setCopyingCard(false), 400);
+        }
+    }, [copyingCard]);
 
     async function applyDiscount() {
         // Placeholder: here you could call a dedicated API to validate discount; for now just show a dummy confirmation
@@ -560,6 +601,43 @@ function CheckoutPage() {
                                 )}
                             </div>
 
+                            <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/15 to-cherry-500/25 relative overflow-hidden rounded-2xl border border-white/10 px-4 py-5">
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                                    <div className="absolute -left-10 bottom-0 w-40 h-40 bg-cherry-500/20 rounded-full blur-3xl"></div>
+                                </div>
+
+                                <div className="relative flex items-center justify-between gap-4">
+                                    <div className="space-y-2">
+                                        <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">Card Number</div>
+                                        <div className="text-white text-xl font-semibold tracking-[0.35em] sm:tracking-[0.4em]">
+                                            {FORMATTED_PAYMENT_CARD_NUMBER}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyCardNumber}
+                                        disabled={copyingCard}
+                                        className="shrink-0 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-2 backdrop-blur flex items-center gap-2 transition-all duration-200 disabled:opacity-60"
+                                    >
+                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+                                            📋
+                                        </span>
+                                        <span>کپی</span>
+                                    </button>
+                                </div>
+
+                                <div className="relative mt-6 flex flex-wrap items-center gap-4">
+                                    <div>
+                                        <div className="text-xs text-gray-300">به نام</div>
+                                        <div className="text-sm font-semibold text-white">{PAYMENT_CARD.holder}</div>
+                                    </div>
+                                    <div className="ml-auto text-xs text-gray-300 bg-white/10 px-3 py-1 rounded-full backdrop-blur">
+                                        لطفاً پس از پرداخت فیش را آپلود کنید
+                                    </div>
+                                </div>
+                            </div>
+
                             <FileUpload
                                 name="receipt"
                                 value={form.receipt}
@@ -828,6 +906,43 @@ function CheckoutPage() {
                                     {discountInfo && (
                                         <div className="text-xs text-green-400 mt-2">✅ کد {discountInfo.code} اعمال شد ({formatPrice(discountInfo.amount)} تومان تخفیف)</div>
                                     )}
+                                </div>
+
+                                <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/15 to-cherry-500/25 relative overflow-hidden rounded-2xl border border-white/10 px-4 py-5">
+                                    <div className="absolute inset-0 pointer-events-none">
+                                        <div className="absolute -right-10 -top-12 w-44 h-44 bg-white/10 rounded-full blur-3xl"></div>
+                                        <div className="absolute -left-10 bottom-0 w-56 h-56 bg-cherry-500/20 rounded-full blur-[70px]"></div>
+                                    </div>
+
+                                    <div className="relative flex items-start justify-between gap-6">
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">Card Number</div>
+                                            <div className="text-white text-2xl font-semibold tracking-[0.4em]">
+                                                {FORMATTED_PAYMENT_CARD_NUMBER}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyCardNumber}
+                                            disabled={copyingCard}
+                                            className="shrink-0 rounded-2xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-2.5 backdrop-blur flex items-center gap-2 transition-all duration-200 disabled:opacity-60"
+                                        >
+                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                                                📋
+                                            </span>
+                                            <span>کپی شماره کارت</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="relative mt-6 flex items-center gap-4">
+                                        <div>
+                                            <div className="text-xs text-gray-300">به نام</div>
+                                            <div className="text-sm md:text-base font-semibold text-white">{PAYMENT_CARD.holder}</div>
+                                        </div>
+                                        <div className="ml-auto text-xs text-gray-300 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur">
+                                            لطفاً پس از پرداخت، فیش واریزی را بارگذاری کنید
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <FileUpload
