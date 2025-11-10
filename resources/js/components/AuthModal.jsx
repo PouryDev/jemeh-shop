@@ -70,14 +70,16 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
         setErrors({});
         
         try {
+            const instagramId = registerForm.instagram_id?.trim() ?? '';
             const res = await apiRequest('/api/auth/register', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
                 },
+
                 body: JSON.stringify({
                     name: registerForm.name,
-                    instagram_id: registerForm.instagram_id,
+                    instagram_id: instagramId.length ? instagramId : null,
                     phone: convertPersianToEnglish(registerForm.phone),
                     password: registerForm.password,
                     password_confirmation: registerForm.password_confirmation
@@ -155,7 +157,13 @@ function AuthModal({ open, onClose, onSuccess, initialTab = 'login' }) {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">آیدی اینستاگرام</label>
-                                    <input type="text" value={registerForm.instagram_id} onChange={(e)=>setRegisterForm({...registerForm, instagram_id:e.target.value})} placeholder="@username" required className={`w-full bg-white/5 border ${errors.instagram_id ? 'border-red-500' : 'border-white/10'} rounded-lg px-3 py-2 text-white`} />
+                                    <input
+                                        type="text"
+                                        value={registerForm.instagram_id}
+                                        onChange={(e)=>setRegisterForm({...registerForm, instagram_id:e.target.value})}
+                                        placeholder="@username"
+                                        className={`w-full bg-white/5 border ${errors.instagram_id ? 'border-red-500' : 'border-white/10'} rounded-lg px-3 py-2 text-white`}
+                                    />
                                     {errors.instagram_id && <p className="text-red-400 text-xs mt-1">{errors.instagram_id[0]}</p>}
                                 </div>
                                 <div>

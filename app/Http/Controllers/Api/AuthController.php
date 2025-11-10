@@ -41,18 +41,18 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'instagram_id' => 'required|string|max:255|unique:users,instagram_id',
+            'instagram_id' => 'nullable|string|max:255|unique:users,instagram_id',
             'phone' => 'required|string|max:255|unique:users,phone',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'instagram_id' => $request->instagram_id,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'instagram_id' => filled($validated['instagram_id'] ?? null) ? $validated['instagram_id'] : null,
+            'phone' => $validated['phone'],
+            'password' => Hash::make($validated['password']),
         ]);
 
         // Create Sanctum token for new user

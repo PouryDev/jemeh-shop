@@ -62,14 +62,14 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'instagram_id' => 'required|string|max:255|unique:users,instagram_id',
+            'instagram_id' => 'nullable|string|max:255|unique:users,instagram_id',
             'phone' => 'required|string|max:255|unique:users,phone',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
         $user = User::create([
             'name' => $data['name'],
-            'instagram_id' => $data['instagram_id'],
+            'instagram_id' => filled($data['instagram_id'] ?? null) ? $data['instagram_id'] : null,
             'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
         ]);

@@ -45,12 +45,20 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
         e.preventDefault();
         setLoading(true); setError(null);
         try {
+            const instagramId = registerForm.instagram_id?.trim() ?? '';
+
             const res = await apiRequest('/api/auth/register', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(registerForm),
+                body: JSON.stringify({
+                    name: registerForm.name,
+                    instagram_id: instagramId.length ? instagramId : null,
+                    phone: registerForm.phone,
+                    password: registerForm.password,
+                    password_confirmation: registerForm.password_confirmation,
+                }),
             });
             const data = await res.json();
             if (!res.ok || !data?.success) throw new Error(data?.message || 'register-failed');
@@ -113,7 +121,12 @@ function CheckoutAuthModal({ open, onClose, onSuccess }) {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">آیدی اینستاگرام</label>
-                                    <input value={registerForm.instagram_id} onChange={(e)=>setRegisterForm({...registerForm, instagram_id:e.target.value})} placeholder="آیدی اینستاگرام" required className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white" />
+                                    <input
+                                        value={registerForm.instagram_id}
+                                        onChange={(e)=>setRegisterForm({...registerForm, instagram_id:e.target.value})}
+                                        placeholder="آیدی اینستاگرام (اختیاری)"
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white"
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">شماره تلفن</label>
