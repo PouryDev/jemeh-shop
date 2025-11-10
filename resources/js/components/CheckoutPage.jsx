@@ -13,6 +13,7 @@ const PAYMENT_CARD = {
 };
 
 const FORMATTED_PAYMENT_CARD_NUMBER = PAYMENT_CARD.number.replace(/(.{4})/g, '$1 ').trim();
+const FORMATTED_PAYMENT_CARD_NUMBER_PERSIAN = FORMATTED_PAYMENT_CARD_NUMBER.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 
 function CheckoutPage() {
     const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -609,9 +610,9 @@ function CheckoutPage() {
 
                                 <div className="relative flex items-center justify-between gap-4">
                                     <div className="space-y-2">
-                                        <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">Card Number</div>
-                                        <div className="text-white text-xl font-semibold tracking-[0.35em] sm:tracking-[0.4em]">
-                                            {FORMATTED_PAYMENT_CARD_NUMBER}
+                                        <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">شماره کارت</div>
+                                        <div className="text-white text-xl font-semibold tracking-[0.2em] sm:tracking-[0.25em] whitespace-nowrap" style={{ direction: 'ltr' }} onClick={handleCopyCardNumber}>
+                                            {FORMATTED_PAYMENT_CARD_NUMBER_PERSIAN}
                                         </div>
                                     </div>
                                     <button
@@ -631,9 +632,6 @@ function CheckoutPage() {
                                     <div>
                                         <div className="text-xs text-gray-300">به نام</div>
                                         <div className="text-sm font-semibold text-white">{PAYMENT_CARD.holder}</div>
-                                    </div>
-                                    <div className="ml-auto text-xs text-gray-300 bg-white/10 px-3 py-1 rounded-full backdrop-blur">
-                                        لطفاً پس از پرداخت فیش را آپلود کنید
                                     </div>
                                 </div>
                             </div>
@@ -916,9 +914,9 @@ function CheckoutPage() {
 
                                     <div className="relative flex items-start justify-between gap-6">
                                         <div className="space-y-2">
-                                            <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">Card Number</div>
-                                            <div className="text-white text-2xl font-semibold tracking-[0.4em]">
-                                                {FORMATTED_PAYMENT_CARD_NUMBER}
+                                            <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">شماره کارت</div>
+                                            <div className="text-white text-2xl font-semibold tracking-[0.22em] sm:tracking-[0.3em] whitespace-nowrap" style={{ direction: 'ltr' }}>
+                                                {FORMATTED_PAYMENT_CARD_NUMBER_PERSIAN}
                                             </div>
                                         </div>
                                         <button
