@@ -128,6 +128,9 @@ return [
         'email' => 'ایمیل',
         'password' => 'رمز عبور',
         'name' => 'نام',
+        'link_type' => 'نوع لینک',
+        'linkable_id' => 'شناسه لینک',
+        'custom_url' => 'آدرس سفارشی',
     ],
 ];
 

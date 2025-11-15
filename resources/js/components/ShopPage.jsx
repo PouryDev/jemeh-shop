@@ -4,6 +4,7 @@ import { apiRequest } from '../utils/sanctumAuth';
 import ProductCard from './ProductCard';
 import LoadingSpinner from './LoadingSpinner';
 import SearchDropdown from './SearchDropdown';
+import HeroSlider from './HeroSlider';
 import { useSeo } from '../hooks/useSeo';
 import useDragScroll from '../hooks/useDragScroll';
 
@@ -204,6 +205,9 @@ function ShopPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+            {/* Hero Slider */}
+            <HeroSlider />
+            
             {/* Categories Carousel */}
             {categories.length > 0 && (
                 <section className="px-4 py-4">

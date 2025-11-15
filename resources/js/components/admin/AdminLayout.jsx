@@ -104,6 +104,16 @@ function AdminLayout() {
                 </svg>
             ),
             path: '/admin/campaigns'
+        },
+        {
+            id: 'hero-slides',
+            title: 'اسلایدهای Hero',
+            icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            ),
+            path: '/admin/hero-slides'
         }
     ];
 
@@ -253,23 +263,27 @@ function AdminLayout() {
 
                             {/* Menu Items */}
                             <nav className="space-y-2">
-                                {menuItems.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            navigate(item.path);
-                                            closeSidebar();
-                                        }}
-                                        className={`w-full flex items-center space-x-3 space-x-reverse p-4 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg ${
-                                            location.pathname === item.path
-                                                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-purple-500/20'
-                                                : 'text-gray-300 hover:bg-white/5 hover:text-white hover:shadow-white/10'
-                                        }`}
-                                    >
-                                        {item.icon}
-                                        <span className="font-medium">{item.title}</span>
-                                    </button>
-                                ))}
+                                {menuItems.map((item) => {
+                                    const isActive = location.pathname === item.path || 
+                                                    (item.path !== '/admin' && location.pathname.startsWith(item.path));
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => {
+                                                navigate(item.path);
+                                                closeSidebar();
+                                            }}
+                                            className={`w-full flex items-center space-x-3 space-x-reverse p-4 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg ${
+                                                isActive
+                                                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-purple-500/20'
+                                                    : 'text-gray-300 hover:bg-white/5 hover:text-white hover:shadow-white/10'
+                                            }`}
+                                        >
+                                            {item.icon}
+                                            <span className="font-medium">{item.title}</span>
+                                        </button>
+                                    );
+                                })}
                             </nav>
 
                             {/* Logout Button */}
@@ -304,20 +318,24 @@ function AdminLayout() {
 
                         {/* Menu Items */}
                         <nav className="space-y-3">
-                            {menuItems.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => navigate(item.path)}
-                                    className={`w-full flex items-center space-x-4 space-x-reverse p-4 rounded-xl transition-all duration-200 ${
-                                        location.pathname === item.path
-                                            ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                                    }`}
-                                >
-                                    {item.icon}
-                                    <span className="font-medium text-lg">{item.title}</span>
-                                </button>
-                            ))}
+                            {menuItems.map((item) => {
+                                const isActive = location.pathname === item.path || 
+                                                (item.path !== '/admin' && location.pathname.startsWith(item.path));
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => navigate(item.path)}
+                                        className={`w-full flex items-center space-x-4 space-x-reverse p-4 rounded-xl transition-all duration-200 ${
+                                            isActive
+                                                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                                                : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                    >
+                                        {item.icon}
+                                        <span className="font-medium text-lg">{item.title}</span>
+                                    </button>
+                                );
+                            })}
                         </nav>
 
                         {/* Quick Actions */}

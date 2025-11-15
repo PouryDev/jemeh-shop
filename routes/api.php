@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\HeroSlideController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,8 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/campaigns/active', [CampaignController::class, 'active']);
 Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/hero-slides', [HeroSlideController::class, 'index']);
+Route::post('/hero-slides/{id}/click', [HeroSlideController::class, 'click']);
 // Public colors and sizes for filters
 Route::get('/colors', function () {
     $colors = \App\Models\Color::where('is_active', true)->orderBy('name')->get();
@@ -420,4 +423,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class
         $campaign->update(['is_active' => !$campaign->is_active]);
         return response()->json(['success' => true, 'data' => $campaign]);
     });
+    
+    // Hero Slides
+    Route::apiResource('hero-slides', \App\Http\Controllers\Api\AdminHeroSlideController::class);
+    Route::post('/hero-slides/update-order', [\App\Http\Controllers\Api\AdminHeroSlideController::class, 'updateOrder']);
 });

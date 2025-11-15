@@ -19,6 +19,8 @@ import AdminCampaignManagement from './admin/AdminCampaignManagement';
 import AdminCampaignForm from './admin/AdminCampaignForm';
 import AdminDiscountManagement from './admin/AdminDiscountManagement';
 import AdminDiscountForm from './admin/AdminDiscountForm';
+import AdminHeroSlideManagement from './admin/AdminHeroSlideManagement';
+import AdminHeroSlideForm from './admin/AdminHeroSlideForm';
 import AccountLayout from './account/AccountLayout';
 import AccountProfile from './account/AccountProfile';
 import AccountOrders from './account/AccountOrders';
@@ -87,6 +89,9 @@ function App() {
                             <Route path="discounts" element={<AdminDiscountManagement />} />
                             <Route path="discounts/create" element={<AdminDiscountForm />} />
                             <Route path="discounts/:id/edit" element={<AdminDiscountForm />} />
+                            <Route path="hero-slides" element={<AdminHeroSlideManagement />} />
+                            <Route path="hero-slides/create" element={<AdminHeroSlideForm />} />
+                            <Route path="hero-slides/:id/edit" element={<AdminHeroSlideForm />} />
                         </Route>
                         </Routes>
                     </Layout>
