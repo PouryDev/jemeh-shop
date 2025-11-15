@@ -145,7 +145,36 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class
     
     Route::patch('/orders/{order}/status', function (\Illuminate\Http\Request $request, $orderId) {
         $order = \App\Models\Order::findOrFail($orderId);
-        $order->update(['status' => $request->input('status')]);
+        
+        $oldStatus = $order->status;
+        $newStatus = $request->input('status');
+        
+        // If order is being cancelled, restore stock
+        if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+                $order->load('items');
+                
+                foreach ($order->items as $item) {
+                    $quantity = $item->quantity;
+                    
+                    if ($item->product_variant_id) {
+                        // Restore variant stock
+                        $variant = \App\Models\ProductVariant::find($item->product_variant_id);
+                        if ($variant) {
+                            $variant->increment('stock', $quantity);
+                        }
+                    } else {
+                        // Restore product stock
+                        $product = \App\Models\Product::find($item->product_id);
+                        if ($product) {
+                            $product->increment('stock', $quantity);
+                        }
+                    }
+                }
+            });
+        }
+        
+        $order->update(['status' => $newStatus]);
         return response()->json(['success' => true, 'data' => $order]);
     });
     

@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
@@ -46,7 +49,36 @@ class OrderController extends Controller
         $data = $request->validate([
             'status' => 'required|in:pending,confirmed,cancelled,shipped',
         ]);
-        $order->update(['status' => $data['status']]);
+        
+        $oldStatus = $order->status;
+        $newStatus = $data['status'];
+        
+        // If order is being cancelled, restore stock
+        if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+            DB::transaction(function () use ($order) {
+                $order->load('items');
+                
+                foreach ($order->items as $item) {
+                    $quantity = $item->quantity;
+                    
+                    if ($item->product_variant_id) {
+                        // Restore variant stock
+                        $variant = ProductVariant::find($item->product_variant_id);
+                        if ($variant) {
+                            $variant->increment('stock', $quantity);
+                        }
+                    } else {
+                        // Restore product stock
+                        $product = Product::find($item->product_id);
+                        if ($product) {
+                            $product->increment('stock', $quantity);
+                        }
+                    }
+                }
+            });
+        }
+        
+        $order->update(['status' => $newStatus]);
         return back();
     }
 
