@@ -1,5 +1,45 @@
 # Docker Setup for Jemeh Shop
 
+## Docker Mirror Configuration (Arvan Cloud)
+
+برای استفاده از mirror ابر آروان برای دریافت سریع‌تر image های Docker:
+
+### روش ساده (استفاده از اسکریپت):
+
+```bash
+sudo ./setup-docker-mirror.sh
+```
+
+### روش دستی:
+
+1. **کپی فایل پیکربندی به مسیر Docker daemon:**
+
+   ```bash
+   sudo mkdir -p /etc/docker
+   sudo cp docker/daemon.json /etc/docker/daemon.json
+   ```
+
+2. **راه‌اندازی مجدد سرویس Docker:**
+
+   ```bash
+   sudo systemctl restart docker
+   ```
+
+   یا در macOS:
+
+   ```bash
+   # Restart Docker Desktop from the menu or:
+   osascript -e 'quit app "Docker"' && open -a Docker
+   ```
+
+3. **بررسی تنظیمات:**
+
+   ```bash
+   docker info | grep -A 5 "Registry Mirrors"
+   ```
+
+پس از این تنظیمات، تمام image های Docker از mirror ابر آروان (`https://dockerhub-mirror.arvan.run`) دریافت می‌شوند.
+
 ## Quick Start
 
 1. **Setup Environment:**
