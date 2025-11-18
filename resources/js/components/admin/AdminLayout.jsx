@@ -242,7 +242,7 @@ function AdminLayout() {
                         onClick={closeSidebar}
                     ></div>
                     <div 
-                        className="fixed right-0 top-0 h-full w-80 bg-gradient-to-b from-gray-800 to-gray-900 shadow-2xl transition-transform duration-300 ease-out"
+                        className="fixed right-0 top-0 h-full w-80 bg-gradient-to-b from-gray-800 to-gray-900 shadow-2xl transition-transform duration-300 ease-out overflow-y-auto"
                         style={{
                             transform: sidebarAnimating ? 'translateX(0)' : 'translateX(100%)'
                         }}
