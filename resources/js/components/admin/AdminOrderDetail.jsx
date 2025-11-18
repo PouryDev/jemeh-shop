@@ -54,6 +54,7 @@ function AdminOrderDetail() {
     const getStatusColor = (status) => {
         switch (status) {
             case 'pending': return 'text-yellow-400';
+            case 'confirmed': return 'text-emerald-400';
             case 'processing': return 'text-blue-400';
             case 'shipped': return 'text-purple-400';
             case 'delivered': return 'text-green-400';
@@ -65,6 +66,7 @@ function AdminOrderDetail() {
     const getStatusText = (status) => {
         switch (status) {
             case 'pending': return 'در انتظار';
+            case 'confirmed': return 'تایید شده';
             case 'processing': return 'در حال پردازش';
             case 'shipped': return 'ارسال شده';
             case 'delivered': return 'تحویل داده شده';

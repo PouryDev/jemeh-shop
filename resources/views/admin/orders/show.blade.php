@@ -87,8 +87,16 @@
                 <div class="space-y-1">
                     <label class="block text-xs text-gray-300">وضعیت سفارش</label>
                     <select name="status" class="w-full rounded-lg bg-white/5 border border-white/10 focus:border-cherry-600 focus:ring-2 focus:ring-cherry-600/30 outline-none py-2.5 px-3 text-sm transition">
+                        @php
+                            $statusLabels = [
+                                'pending' => 'در انتظار',
+                                'confirmed' => 'تایید شده',
+                                'cancelled' => 'لغو شده',
+                                'shipped' => 'ارسال شده'
+                            ];
+                        @endphp
                         @foreach(['pending','confirmed','cancelled','shipped'] as $st)
-                            <option value="{{ $st }}" {{ $order->status === $st ? 'selected' : '' }}>{{ $st }}</option>
+                            <option value="{{ $st }}" {{ $order->status === $st ? 'selected' : '' }}>{{ $statusLabels[$st] ?? $st }}</option>
                         @endforeach
                     </select>
                 </div>

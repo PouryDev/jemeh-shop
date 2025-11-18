@@ -61,6 +61,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 });
 
+// Payment callback route (for gateway redirects)
+Route::get('/payment/callback/{gateway}', [\App\Http\Controllers\Api\PaymentController::class, 'callback'])
+    ->name('payment.callback');
+
 // React SPA route - catch all for frontend routes (must be last)
 Route::get('/{any}', function () {
     return view('react-app');

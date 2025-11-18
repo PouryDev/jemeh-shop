@@ -29,6 +29,7 @@ function AccountOrders() {
     const getStatusColor = (status) => {
         switch (status) {
             case 'pending': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
+            case 'confirmed': return 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30';
             case 'processing': return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
             case 'shipped': return 'text-purple-400 bg-purple-500/20 border-purple-500/30';
             case 'delivered': return 'text-green-400 bg-green-500/20 border-green-500/30';
@@ -40,6 +41,7 @@ function AccountOrders() {
     const getStatusText = (status) => {
         switch (status) {
             case 'pending': return 'در انتظار پردازش';
+            case 'confirmed': return 'تایید شده';
             case 'processing': return 'در حال پردازش';
             case 'shipped': return 'ارسال شده';
             case 'delivered': return 'تحویل داده شده';

@@ -13,6 +13,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'order_id',
+        'payment_gateway_id',
         'invoice_number',
         'amount',
         'original_amount',
@@ -34,6 +35,11 @@ class Invoice extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function paymentGateway(): BelongsTo
+    {
+        return $this->belongsTo(PaymentGateway::class, 'payment_gateway_id');
     }
 
     public function transactions(): HasMany

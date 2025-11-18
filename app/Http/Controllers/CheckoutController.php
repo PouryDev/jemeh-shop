@@ -131,9 +131,10 @@ class CheckoutController extends Controller
                 'customer_name' => 'required|string|max:255',
                 'customer_phone' => 'required|string|max:50',
                 'customer_address' => 'required|string|max:1000',
-                'receipt' => 'required|image|max:4096',
+                'receipt' => 'nullable|image|max:4096', // Receipt is now optional, handled by payment gateway
                 'delivery_method_id' => 'required|exists:delivery_methods,id',
                 'discount_code' => 'nullable|string|max:50',
+                'payment_gateway_id' => 'nullable|exists:payment_gateways,id', // Optional gateway selection
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // For API requests (React), return JSON with validation errors
@@ -294,6 +295,7 @@ class CheckoutController extends Controller
 
         $invoice = Invoice::create([
             'order_id' => $order->id,
+            'payment_gateway_id' => $data['payment_gateway_id'] ?? null,
             'invoice_number' => 'INV-'.Str::upper(Str::random(8)),
             'amount' => $finalAmount,
             'original_amount' => $originalTotal + $deliveryFee,
@@ -303,7 +305,8 @@ class CheckoutController extends Controller
             'status' => 'unpaid',
         ]);
 
-        $request->session()->forget('cart');
+        // Don't clear cart here - it will be cleared after successful payment initiation
+        // This prevents cart loss if payment gateway is unavailable
         
         // Check if this is an API request (from React)
         if ($request->expectsJson()) {

@@ -31,13 +31,16 @@ function CheckoutPage() {
         address: '', 
         discount_code: '', 
         receipt: null,
-        delivery_method_id: null
+        delivery_method_id: null,
+        payment_gateway_id: null
     });
     const [submitting, setSubmitting] = React.useState(false);
     const [discountInfo, setDiscountInfo] = React.useState(null);
     const [deliveryMethods, setDeliveryMethods] = React.useState([]);
     const [selectedDeliveryMethod, setSelectedDeliveryMethod] = React.useState(null);
     const [copyingCard, setCopyingCard] = React.useState(false);
+    const [paymentGateways, setPaymentGateways] = React.useState([]);
+    const [selectedGateway, setSelectedGateway] = React.useState(null);
 
     const formatPrice = (v) => {
         try { return Number(v || 0).toLocaleString('fa-IR'); } catch { return v; }
@@ -94,6 +97,26 @@ function CheckoutPage() {
         }
     }, []);
 
+    const fetchPaymentGateways = React.useCallback(async () => {
+        try {
+            const res = await apiRequest('/api/payment/gateways');
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            const data = await res.json();
+            setPaymentGateways(data.data || []);
+            // Auto-select first gateway if available
+            if (data.data && data.data.length > 0) {
+                const firstGateway = data.data[0];
+                setSelectedGateway(firstGateway);
+                setForm(prev => ({ ...prev, payment_gateway_id: firstGateway.id }));
+            }
+        } catch (e) {
+            console.error('Failed to fetch payment gateways:', e);
+            setPaymentGateways([]);
+        }
+    }, []);
+
     const fetchCart = React.useCallback(async () => {
         setLoading(true);
         try {
@@ -117,7 +140,8 @@ function CheckoutPage() {
     React.useEffect(() => {
         fetchCart();
         fetchDeliveryMethods();
-    }, [fetchCart, fetchDeliveryMethods]);
+        fetchPaymentGateways();
+    }, [fetchCart, fetchDeliveryMethods, fetchPaymentGateways]);
 
     // Fetch addresses and delivery methods when user is authenticated
     React.useEffect(() => {
@@ -185,6 +209,16 @@ function CheckoutPage() {
         setForm((prev) => ({ ...prev, delivery_method_id: methodId }));
     };
 
+    const handlePaymentGatewayChange = (gatewayId) => {
+        const gateway = paymentGateways.find(g => g.id === gatewayId);
+        setSelectedGateway(gateway);
+        setForm((prev) => ({ ...prev, payment_gateway_id: gatewayId }));
+        // Clear receipt if switching away from card-to-card
+        if (gateway && gateway.type !== 'card_to_card') {
+            setForm((prev) => ({ ...prev, receipt: null }));
+        }
+    };
+
     const handleCopyCardNumber = React.useCallback(async () => {
         if (copyingCard) return;
         setCopyingCard(true);
@@ -250,7 +284,14 @@ function CheckoutPage() {
             showToast('انتخاب روش ارسال الزامی است', 'error');
             return;
         }
-        if (!form.receipt) {
+        if (!form.payment_gateway_id) {
+            showToast('انتخاب روش پرداخت الزامی است', 'error');
+            return;
+        }
+        
+        // Check if card-to-card gateway requires receipt
+        const gateway = paymentGateways.find(g => g.id === form.payment_gateway_id);
+        if (gateway && gateway.type === 'card_to_card' && !form.receipt) {
             showToast('آپلود فیش واریزی الزامی است', 'error');
             return;
         }
@@ -268,16 +309,17 @@ function CheckoutPage() {
                 formData.append('discount_code', form.discount_code);
             }
             
-            const res = await apiRequest('/api/checkout', {
+            // First, create order and invoice
+            const checkoutRes = await apiRequest('/api/checkout', {
                 method: 'POST',
                 body: formData,
             });
             
-            if (!res.ok) {
-                const errorData = await res.json();
+            if (!checkoutRes.ok) {
+                const errorData = await checkoutRes.json();
                 
                 // Handle validation errors (422 status) with toast notifications
-                if (res.status === 422 && errorData.errors) {
+                if (checkoutRes.status === 422 && errorData.errors) {
                     // Show first validation error as toast
                     const firstError = Object.values(errorData.errors)[0];
                     if (firstError && firstError[0]) {
@@ -292,30 +334,77 @@ function CheckoutPage() {
                 throw new Error(errorData.message || 'خطا در ثبت سفارش');
             }
             
-            const data = await res.json();
+            const checkoutData = await checkoutRes.json();
             
-            if (data.success) {
-                // Show success toast
-                showToast('سفارش با موفقیت ثبت شد', 'success');
-                // Derive invoice id safely from response
-                const invoiceId = (
-                    (data.invoice && (data.invoice.id || data.invoice.invoice_id)) ||
-                    data.invoice_id ||
-                    data.invoiceNumber ||
-                    data.invoice_number ||
-                    (data.invoice && data.invoice.number) ||
-                    (data.order && data.order.id) ||
-                    data.id ||
-                    Date.now()
-                );
-                // Redirect to React SPA thanks page
-                window.location.href = `/thanks/${encodeURIComponent(invoiceId)}`;
+            if (!checkoutData.success) {
+                throw new Error(checkoutData.message || 'خطا در ثبت سفارش');
+            }
+
+            const invoiceId = checkoutData.invoice?.id || checkoutData.invoice_id;
+            
+            // Handle payment based on gateway type
+            const gateway = paymentGateways.find(g => g.id === form.payment_gateway_id);
+            
+            // Initiate payment for all gateways
+            const paymentRes = await apiRequest('/api/payment/initiate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    invoice_id: invoiceId,
+                    gateway_id: form.payment_gateway_id,
+                }),
+            });
+            
+            if (!paymentRes.ok) {
+                const errorData = await paymentRes.json();
+                throw new Error(errorData.message || 'خطا در شروع پرداخت');
+            }
+            
+            const paymentData = await paymentRes.json();
+            
+            // Cart will be cleared only after successful payment verification
+            // This prevents cart loss if user cancels payment
+            
+            if (gateway.type === 'card_to_card') {
+                // For card-to-card, upload receipt and verify
+                if (form.receipt && paymentData.data.transaction_id) {
+                    const verifyFormData = new FormData();
+                    verifyFormData.append('transaction_id', paymentData.data.transaction_id);
+                    verifyFormData.append('receipt', form.receipt);
+                    
+                    const verifyRes = await apiRequest('/api/payment/verify', {
+                        method: 'POST',
+                        body: verifyFormData,
+                    });
+                    
+                    if (verifyRes.ok) {
+                        showToast('سفارش با موفقیت ثبت شد. پس از تایید پرداخت، سفارش شما پردازش خواهد شد.', 'success');
+                        window.location.href = `/thanks/${encodeURIComponent(invoiceId)}`;
+                    } else {
+                        throw new Error('خطا در آپلود فیش واریزی');
+                    }
+                } else {
+                    throw new Error('خطا در ایجاد تراکنش پرداخت');
+                }
+            } else if (gateway.type === 'zarinpal') {
+                // Redirect to ZarinPal
+                if (paymentData.success && paymentData.data.redirect_url) {
+                    window.location.href = paymentData.data.redirect_url;
+                    return;
+                } else {
+                    throw new Error(paymentData.message || 'خطا در شروع پرداخت');
+                }
             } else {
-                throw new Error(data.message || 'خطا در ثبت سفارش');
+                // Default: redirect to thanks page
+                showToast('سفارش با موفقیت ثبت شد', 'success');
+                window.location.href = `/thanks/${encodeURIComponent(invoiceId)}`;
             }
         } catch (e) {
             showToast(e.message || 'ثبت سفارش با خطا مواجه شد', 'error');
             setSubmitting(false);
+            // Cart is not cleared if payment initiation fails, so user can retry
         }
     }
 
@@ -576,6 +665,54 @@ function CheckoutPage() {
                                 )}
                             </div>
 
+                            {/* Payment Gateway Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-3">روش پرداخت *</label>
+                                {paymentGateways.length === 0 ? (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
+                                        <div className="text-yellow-400 text-sm">
+                                            در حال بارگذاری روش‌های پرداخت...
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {paymentGateways.map((gateway) => (
+                                            <div 
+                                                key={gateway.id} 
+                                                className={`relative cursor-pointer transition-all duration-200`}
+                                                onClick={() => handlePaymentGatewayChange(gateway.id)}
+                                            >
+                                                <div className={`bg-white/5 rounded-xl p-3 border transition-all duration-200 ${
+                                                    form.payment_gateway_id === gateway.id
+                                                        ? 'border-cherry-500/50 bg-cherry-500/5'
+                                                        : 'border-white/10 hover:border-cherry-400/30'
+                                                }`}>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
+                                                                form.payment_gateway_id === gateway.id
+                                                                    ? 'border-cherry-500 bg-cherry-500'
+                                                                    : 'border-white/40 bg-white/5'
+                                                            }`}>
+                                                                {form.payment_gateway_id === gateway.id && (
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-white mx-auto mt-0.5"></div>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-white font-medium text-sm">{gateway.display_name}</span>
+                                                        </div>
+                                                    </div>
+                                                    {gateway.description && (
+                                                        <div className="text-xs text-gray-400 mt-2 pr-7">
+                                                            {gateway.description}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
                                 <label className="block text-sm text-gray-300 mb-2">کد تخفیف</label>
                                 <div className="flex gap-2">
@@ -602,50 +739,84 @@ function CheckoutPage() {
                                 )}
                             </div>
 
-                            <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/15 to-cherry-500/25 relative overflow-hidden rounded-2xl border border-white/10 px-4 py-5">
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                                    <div className="absolute -left-10 bottom-0 w-40 h-40 bg-cherry-500/20 rounded-full blur-3xl"></div>
-                                </div>
+                            {/* Card-to-Card Payment Info - Only show when card-to-card gateway is selected */}
+                            {selectedGateway && selectedGateway.type === 'card_to_card' && selectedGateway.config && (
+                                <>
+                                    <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/15 to-cherry-500/25 relative overflow-hidden rounded-2xl border border-white/10 px-4 py-5">
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                                            <div className="absolute -left-10 bottom-0 w-40 h-40 bg-cherry-500/20 rounded-full blur-3xl"></div>
+                                        </div>
 
-                                <div className="relative flex items-center justify-between gap-4">
-                                    <div className="space-y-2">
-                                        <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">شماره کارت</div>
-                                        <div className="text-white text-xl font-semibold tracking-[0.2em] sm:tracking-[0.25em] whitespace-nowrap" style={{ direction: 'ltr' }} onClick={handleCopyCardNumber}>
-                                            {FORMATTED_PAYMENT_CARD_NUMBER_PERSIAN}
+                                        <div className="relative flex items-center justify-between gap-4">
+                                            <div className="space-y-2">
+                                                <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">شماره کارت</div>
+                                                <div className="text-white text-xl font-semibold tracking-[0.2em] sm:tracking-[0.25em] whitespace-nowrap" style={{ direction: 'ltr' }}>
+                                                    {(() => {
+                                                        const cardNumber = selectedGateway.config.card_number || PAYMENT_CARD.number;
+                                                        const formatted = cardNumber.replace(/(.{4})/g, '$1 ').trim();
+                                                        return formatted.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+                                                    })()}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    const cardNumber = selectedGateway.config.card_number || PAYMENT_CARD.number;
+                                                    const rawNumber = cardNumber.replace(/\s+/g, '');
+                                                    if (copyingCard) return;
+                                                    setCopyingCard(true);
+                                                    try {
+                                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                            await navigator.clipboard.writeText(rawNumber);
+                                                        } else {
+                                                            const textArea = document.createElement('textarea');
+                                                            textArea.value = rawNumber;
+                                                            textArea.style.position = 'fixed';
+                                                            textArea.style.left = '-9999px';
+                                                            document.body.appendChild(textArea);
+                                                            textArea.focus();
+                                                            textArea.select();
+                                                            document.execCommand('copy');
+                                                            document.body.removeChild(textArea);
+                                                        }
+                                                        showToast('شماره کارت کپی شد', 'success');
+                                                    } catch (err) {
+                                                        showToast('امکان کپی خودکار وجود ندارد؛ لطفاً دستی کپی کنید', 'error');
+                                                    } finally {
+                                                        setTimeout(() => setCopyingCard(false), 400);
+                                                    }
+                                                }}
+                                                disabled={copyingCard}
+                                                className="shrink-0 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-2 backdrop-blur flex items-center gap-2 transition-all duration-200 disabled:opacity-60"
+                                            >
+                                                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+                                                    📋
+                                                </span>
+                                                <span>کپی</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="relative mt-6 flex flex-wrap items-center gap-4">
+                                            <div>
+                                                <div className="text-xs text-gray-300">به نام</div>
+                                                <div className="text-sm font-semibold text-white">{selectedGateway.config.card_holder || PAYMENT_CARD.holder}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleCopyCardNumber}
-                                        disabled={copyingCard}
-                                        className="shrink-0 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-2 backdrop-blur flex items-center gap-2 transition-all duration-200 disabled:opacity-60"
-                                    >
-                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
-                                            📋
-                                        </span>
-                                        <span>کپی</span>
-                                    </button>
-                                </div>
 
-                                <div className="relative mt-6 flex flex-wrap items-center gap-4">
-                                    <div>
-                                        <div className="text-xs text-gray-300">به نام</div>
-                                        <div className="text-sm font-semibold text-white">{PAYMENT_CARD.holder}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <FileUpload
-                                name="receipt"
-                                value={form.receipt}
-                                onChange={(file) => handleFileChange('receipt', file)}
-                                accept="image/*"
-                                required={true}
-                                label="آپلود فیش واریزی"
-                                placeholder="فیش واریزی را انتخاب کنید"
-                                className="mt-2"
-                            />
+                                    <FileUpload
+                                        name="receipt"
+                                        value={form.receipt}
+                                        onChange={(file) => handleFileChange('receipt', file)}
+                                        accept="image/*"
+                                        required={true}
+                                        label="آپلود فیش واریزی"
+                                        placeholder="فیش واریزی را انتخاب کنید"
+                                        className="mt-2"
+                                    />
+                                </>
+                            )}
 
                             <button 
                                 type="submit" 
@@ -889,6 +1060,56 @@ function CheckoutPage() {
                                     )}
                                 </div>
 
+                                {/* Payment Gateway Selection */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-3">روش پرداخت *</label>
+                                    {paymentGateways.length === 0 ? (
+                                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
+                                            <div className="text-yellow-400 text-sm">
+                                                در حال بارگذاری روش‌های پرداخت...
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {paymentGateways.map((gateway) => (
+                                                <div 
+                                                    key={gateway.id} 
+                                                    className={`relative cursor-pointer transition-all duration-200`}
+                                                    onClick={() => handlePaymentGatewayChange(gateway.id)}
+                                                >
+                                                    <div className={`bg-white/5 rounded-2xl p-4 border transition-all duration-200 ${
+                                                        form.payment_gateway_id === gateway.id
+                                                            ? 'border-cherry-500/50 bg-cherry-500/5'
+                                                            : 'border-white/10 hover:border-cherry-400/30 hover:bg-white/10'
+                                                    }`}>
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                                                form.payment_gateway_id === gateway.id
+                                                                    ? 'border-cherry-500 bg-cherry-500'
+                                                                    : 'border-white/40 bg-white/5'
+                                                            }`}>
+                                                                {form.payment_gateway_id === gateway.id && (
+                                                                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="text-white font-medium text-sm leading-tight">
+                                                                    {gateway.display_name}
+                                                                </h3>
+                                                                {gateway.description && (
+                                                                    <div className="text-xs text-gray-400 mt-1">
+                                                                        {gateway.description}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">کد تخفیف</label>
                                     <div className="flex gap-2">
@@ -906,53 +1127,87 @@ function CheckoutPage() {
                                     )}
                                 </div>
 
-                                <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/15 to-cherry-500/25 relative overflow-hidden rounded-2xl border border-white/10 px-4 py-5">
-                                    <div className="absolute inset-0 pointer-events-none">
-                                        <div className="absolute -right-10 -top-12 w-44 h-44 bg-white/10 rounded-full blur-3xl"></div>
-                                        <div className="absolute -left-10 bottom-0 w-56 h-56 bg-cherry-500/20 rounded-full blur-[70px]"></div>
-                                    </div>
+                                {/* Card-to-Card Payment Info - Only show when card-to-card gateway is selected */}
+                                {selectedGateway && selectedGateway.type === 'card_to_card' && selectedGateway.config && (
+                                    <>
+                                        <div className="bg-gradient-to-br from-indigo-500/15 via-purple-500/15 to-cherry-500/25 relative overflow-hidden rounded-2xl border border-white/10 px-4 py-5">
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <div className="absolute -right-10 -top-12 w-44 h-44 bg-white/10 rounded-full blur-3xl"></div>
+                                                <div className="absolute -left-10 bottom-0 w-56 h-56 bg-cherry-500/20 rounded-full blur-[70px]"></div>
+                                            </div>
 
-                                    <div className="relative flex items-start justify-between gap-6">
-                                        <div className="space-y-2">
-                                            <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">شماره کارت</div>
-                                            <div className="text-white text-2xl font-semibold tracking-[0.22em] sm:tracking-[0.3em] whitespace-nowrap" style={{ direction: 'ltr' }}>
-                                                {FORMATTED_PAYMENT_CARD_NUMBER_PERSIAN}
+                                            <div className="relative flex items-start justify-between gap-6">
+                                                <div className="space-y-2">
+                                                    <div className="text-xs text-gray-300 tracking-[0.3em] uppercase">شماره کارت</div>
+                                                    <div className="text-white text-2xl font-semibold tracking-[0.22em] sm:tracking-[0.3em] whitespace-nowrap" style={{ direction: 'ltr' }}>
+                                                        {(() => {
+                                                            const cardNumber = selectedGateway.config.card_number || PAYMENT_CARD.number;
+                                                            const formatted = cardNumber.replace(/(.{4})/g, '$1 ').trim();
+                                                            return formatted.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        const cardNumber = selectedGateway.config.card_number || PAYMENT_CARD.number;
+                                                        const rawNumber = cardNumber.replace(/\s+/g, '');
+                                                        if (copyingCard) return;
+                                                        setCopyingCard(true);
+                                                        try {
+                                                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                                await navigator.clipboard.writeText(rawNumber);
+                                                            } else {
+                                                                const textArea = document.createElement('textarea');
+                                                                textArea.value = rawNumber;
+                                                                textArea.style.position = 'fixed';
+                                                                textArea.style.left = '-9999px';
+                                                                document.body.appendChild(textArea);
+                                                                textArea.focus();
+                                                                textArea.select();
+                                                                document.execCommand('copy');
+                                                                document.body.removeChild(textArea);
+                                                            }
+                                                            showToast('شماره کارت کپی شد', 'success');
+                                                        } catch (err) {
+                                                            showToast('امکان کپی خودکار وجود ندارد؛ لطفاً دستی کپی کنید', 'error');
+                                                        } finally {
+                                                            setTimeout(() => setCopyingCard(false), 400);
+                                                        }
+                                                    }}
+                                                    disabled={copyingCard}
+                                                    className="shrink-0 rounded-2xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-2.5 backdrop-blur flex items-center gap-2 transition-all duration-200 disabled:opacity-60"
+                                                >
+                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                                                        📋
+                                                    </span>
+                                                    <span>کپی شماره کارت</span>
+                                                </button>
+                                            </div>
+
+                                            <div className="relative mt-6 flex items-center gap-4">
+                                                <div>
+                                                    <div className="text-xs text-gray-300">به نام</div>
+                                                    <div className="text-sm md:text-base font-semibold text-white">{selectedGateway.config.card_holder || PAYMENT_CARD.holder}</div>
+                                                </div>
+                                                <div className="ml-auto text-xs text-gray-300 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur">
+                                                    لطفاً پس از پرداخت، فیش واریزی را بارگذاری کنید
+                                                </div>
                                             </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleCopyCardNumber}
-                                            disabled={copyingCard}
-                                            className="shrink-0 rounded-2xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-2.5 backdrop-blur flex items-center gap-2 transition-all duration-200 disabled:opacity-60"
-                                        >
-                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-                                                📋
-                                            </span>
-                                            <span>کپی شماره کارت</span>
-                                        </button>
-                                    </div>
 
-                                    <div className="relative mt-6 flex items-center gap-4">
-                                        <div>
-                                            <div className="text-xs text-gray-300">به نام</div>
-                                            <div className="text-sm md:text-base font-semibold text-white">{PAYMENT_CARD.holder}</div>
-                                        </div>
-                                        <div className="ml-auto text-xs text-gray-300 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur">
-                                            لطفاً پس از پرداخت، فیش واریزی را بارگذاری کنید
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <FileUpload
-                                    name="receipt"
-                                    value={form.receipt}
-                                    onChange={(file) => handleFileChange('receipt', file)}
-                                    accept="image/*"
-                                    required={true}
-                                    label="آپلود فیش واریزی"
-                                    placeholder="فیش واریزی را انتخاب کنید"
-                                    className="mt-2"
-                                />
+                                        <FileUpload
+                                            name="receipt"
+                                            value={form.receipt}
+                                            onChange={(file) => handleFileChange('receipt', file)}
+                                            accept="image/*"
+                                            required={true}
+                                            label="آپلود فیش واریزی"
+                                            placeholder="فیش واریزی را انتخاب کنید"
+                                            className="mt-2"
+                                        />
+                                    </>
+                                )}
 
                                 <button type="submit" disabled={submitting} className="w-full bg-cherry-600 hover:bg-cherry-500 disabled:opacity-60 text-white rounded-lg px-4 py-2.5">
                                     {submitting ? 'در حال ثبت...' : 'ثبت سفارش'}

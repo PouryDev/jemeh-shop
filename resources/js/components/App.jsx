@@ -21,6 +21,7 @@ import AdminDiscountManagement from './admin/AdminDiscountManagement';
 import AdminDiscountForm from './admin/AdminDiscountForm';
 import AdminHeroSlideManagement from './admin/AdminHeroSlideManagement';
 import AdminHeroSlideForm from './admin/AdminHeroSlideForm';
+import AdminPaymentGateways from './admin/AdminPaymentGateways';
 import AccountLayout from './account/AccountLayout';
 import AccountProfile from './account/AccountProfile';
 import AccountOrders from './account/AccountOrders';
@@ -32,6 +33,7 @@ import NotFound from './NotFound';
 import CategoryPage from './CategoryPage';
 import CategoriesPage from './CategoriesPage';
 import ThanksPage from './ThanksPage';
+import PaymentErrorPage from './PaymentErrorPage';
 import AboutPage from './AboutPage';
 import ContactPage from './ContactPage';
 import ShippingPage from './ShippingPage';
@@ -55,6 +57,7 @@ function App() {
                         <Route path="/cart" element={<CartPage />} />
                         <Route path="/checkout" element={<CheckoutPage />} />
                         <Route path="/thanks/:invoiceId" element={<ThanksPage />} />
+                        <Route path="/payment/error" element={<PaymentErrorPage />} />
                         
                         {/* Static Pages */}
                         <Route path="/about" element={<AboutPage />} />
@@ -92,6 +95,7 @@ function App() {
                             <Route path="hero-slides" element={<AdminHeroSlideManagement />} />
                             <Route path="hero-slides/create" element={<AdminHeroSlideForm />} />
                             <Route path="hero-slides/:id/edit" element={<AdminHeroSlideForm />} />
+                            <Route path="payment-gateways" element={<AdminPaymentGateways />} />
                         </Route>
                         </Routes>
                     </Layout>

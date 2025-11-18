@@ -58,7 +58,8 @@ class OrderController extends Controller
             'customer_phone' => 'required|string|max:20',
             'customer_address' => 'required|string|max:500',
             'delivery_method_id' => 'required|exists:delivery_methods,id',
-            'discount_code' => 'nullable|string|exists:discount_codes,code'
+            'discount_code' => 'nullable|string|exists:discount_codes,code',
+            'payment_gateway_id' => 'nullable|exists:payment_gateways,id',
         ]);
 
         // Get cart from session
@@ -71,9 +72,17 @@ class OrderController extends Controller
             ], 400);
         }
 
-        // Calculate totals and prepare order items
+        // Get delivery method and calculate delivery fee
+        $deliveryMethod = \App\Models\DeliveryMethod::findOrFail($request->input('delivery_method_id'));
+        $deliveryFee = $deliveryMethod->fee;
+
+        // Calculate totals and prepare order items data
         $itemsPayload = [];
         $totalAmount = 0;
+        $originalTotal = 0;
+        $campaignDiscount = 0;
+
+        $campaignService = new \App\Services\CampaignService();
 
         foreach ($cart as $key => $item) {
             $product = Product::with(['campaigns' => function ($query) {
@@ -89,9 +98,15 @@ class OrderController extends Controller
             if ($quantity <= 0) { continue; }
 
             // Get variant price if applicable
+            $productVariant = null;
             $unitPrice = (int) $product->price;
+            $originalPrice = $product->price;
+            $campaignDiscountAmount = 0;
+            $campaignId = null;
+            $variantDisplayName = null;
+
             if ($item['color_id'] || $item['size_id']) {
-                $variant = ProductVariant::where('product_id', $product->id)
+                $productVariant = ProductVariant::where('product_id', $product->id)
                     ->when($item['color_id'], function ($query) use ($item) {
                         $query->where('color_id', $item['color_id']);
                     })
@@ -100,33 +115,45 @@ class OrderController extends Controller
                     })
                     ->first();
                     
-                if ($variant) {
-                    $unitPrice = $variant->price ?? $product->price;
+                if ($productVariant) {
+                    $originalPrice = $productVariant->price ?? $product->price;
+                    $variantDisplayName = $productVariant->display_name;
                 }
             }
 
             // Calculate campaign discount
-            $discountAmount = 0;
-            $finalPrice = $unitPrice;
-            if ($product->campaigns && $product->campaigns->count() > 0) {
-                $campaign = $product->campaigns->first();
-                $discountAmount = $campaign->calculateDiscount($unitPrice);
-                $finalPrice = $unitPrice - $discountAmount;
+            if ($productVariant) {
+                $campaignData = $campaignService->calculateVariantPrice($productVariant);
+            } else {
+                $campaignData = $campaignService->calculateProductPrice($product);
             }
 
-            $lineTotal = $finalPrice * $quantity;
+            if ($campaignData['has_discount']) {
+                $unitPrice = $campaignData['campaign_price'];
+                $campaignDiscountAmount = $campaignData['discount_amount'];
+                $campaignId = $campaignData['campaign']->id;
+            } else {
+                $unitPrice = $originalPrice;
+            }
+
+            $lineTotal = $unitPrice * $quantity;
             $totalAmount += $lineTotal;
+            $originalTotal += $originalPrice * $quantity;
+            $campaignDiscount += $campaignDiscountAmount * $quantity;
 
             $itemsPayload[] = [
                 'product_id' => $product->id,
-                'unit_price' => $finalPrice,
-                'original_price' => $unitPrice,
-                'discount_amount' => $discountAmount,
+                'product_variant_id' => $productVariant?->id,
+                'color_id' => $item['color_id'] ?? null,
+                'size_id' => $item['size_id'] ?? null,
+                'variant_display_name' => $variantDisplayName,
+                'unit_price' => $unitPrice,
+                'original_price' => $originalPrice,
+                'campaign_discount_amount' => $campaignDiscountAmount,
+                'campaign_id' => $campaignId,
                 'quantity' => $quantity,
                 'line_total' => $lineTotal,
                 'cart_key' => $key,
-                'color_id' => $item['color_id'] ?? null,
-                'size_id' => $item['size_id'] ?? null,
             ];
         }
 
@@ -137,9 +164,30 @@ class OrderController extends Controller
             ], 400);
         }
 
-        // Optionally add delivery fee to invoice amount only (orders table has no delivery fee column)
-        $deliveryFee = 0;
-        // If needed, you could fetch and add delivery fee here based on delivery_method_id
+        // Handle discount code
+        $discountAmount = 0;
+        $discountCode = null;
+        if (!empty($request->input('discount_code')) && $request->user()) {
+            $discountService = new \App\Services\DiscountCodeService();
+            $result = $discountService->applyDiscountCode(
+                $request->input('discount_code'),
+                $request->user(),
+                $totalAmount + $deliveryFee
+            );
+            
+            if ($result['success']) {
+                $discountAmount = $result['discount_amount'];
+                $discountCode = $result['discount_code'];
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                    'errors' => ['discount_code' => [$result['message']]],
+                ], 422);
+            }
+        }
+
+        $finalAmount = $totalAmount + $deliveryFee - $discountAmount;
 
         // Handle receipt upload
         $receiptPath = null;
@@ -147,82 +195,60 @@ class OrderController extends Controller
             $receiptPath = $request->file('receipt')->store('receipts', 'public');
         }
 
-        // Persist order, items and invoice in a transaction
-        $order = DB::transaction(function () use ($request, $itemsPayload, $totalAmount, $receiptPath, $deliveryFee, $cart) {
-            $order = new Order();
-            $order->user_id = optional($request->user())->id;
-            $order->customer_name = $request->input('customer_name');
-            $order->customer_phone = $request->input('customer_phone');
-            $order->customer_address = $request->input('customer_address');
-            $order->total_amount = $totalAmount;
-            $order->status = 'pending';
-            if ($receiptPath) {
-                $order->receipt_path = $receiptPath;
-            }
-            $order->save();
+        // Create Invoice WITHOUT Order - Order will be created after payment verification
+        $invoice = DB::transaction(function () use ($request, $totalAmount, $originalTotal, $campaignDiscount, $deliveryFee, $discountAmount, $finalAmount, $receiptPath) {
+            $invoice = Invoice::create([
+                'order_id' => null, // Will be set after payment verification
+                'payment_gateway_id' => $request->input('payment_gateway_id'),
+                'invoice_number' => 'INV-' . Str::upper(Str::random(8)),
+                'amount' => $finalAmount,
+                'original_amount' => $originalTotal + $deliveryFee,
+                'campaign_discount_amount' => $campaignDiscount,
+                'discount_code_amount' => $discountAmount,
+                'currency' => 'IRR',
+                'status' => 'unpaid',
+            ]);
 
-            // Items and stock reduction
-            foreach ($itemsPayload as $row) {
-                $orderItem = $order->items()->create($row);
-                
-                // Reduce stock based on variant selection
-                $cartItem = $cart[$row['cart_key']] ?? null;
-                if ($cartItem) {
-                    $product = Product::find($row['product_id']);
-                    $quantity = $row['quantity'];
-                    
-                    if ($cartItem['color_id'] || $cartItem['size_id']) {
-                        // Find and reduce variant stock
-                        $variant = ProductVariant::where('product_id', $product->id)
-                            ->when($cartItem['color_id'], function ($query) use ($cartItem) {
-                                $query->where('color_id', $cartItem['color_id']);
-                            })
-                            ->when($cartItem['size_id'], function ($query) use ($cartItem) {
-                                $query->where('size_id', $cartItem['size_id']);
-                            })
-                            ->first();
-                            
-                        if ($variant) {
-                            $variant->decrement('stock', $quantity);
-                        }
-                    } else {
-                        // Reduce main product stock
-                        $product->decrement('stock', $quantity);
-                    }
-                }
-            }
-
-            // Invoice
-            $invoice = new Invoice();
-            $invoice->order_id = $order->id;
-            $invoice->invoice_number = 'INV-' . Str::upper(Str::random(8));
-            $invoice->amount = $totalAmount + $deliveryFee;
-            $invoice->status = 'unpaid';
-            $invoice->save();
-
-            // Attach for response
-            $order->setRelation('invoice', $invoice);
-
-            return $order;
+            return $invoice;
         });
 
-        // Send Telegram notification to admins
-        $this->sendOrderNotification($order);
+        // Store order data in cache keyed by invoice_id for later use after payment verification
+        // Using cache instead of session because payment callbacks from external gateways
+        // might not have access to the session
+        // This includes all data needed to create the order
+        $orderData = [
+            'user_id' => optional($request->user())->id,
+            'customer_name' => $request->input('customer_name'),
+            'customer_phone' => $request->input('customer_phone'),
+            'customer_address' => $request->input('customer_address'),
+            'delivery_method_id' => $request->input('delivery_method_id'),
+            'delivery_address_id' => $request->input('delivery_address_id'),
+            'delivery_fee' => $deliveryFee,
+            'total_amount' => $totalAmount,
+            'original_amount' => $originalTotal,
+            'campaign_discount_amount' => $campaignDiscount,
+            'discount_code' => $request->input('discount_code'),
+            'discount_amount' => $discountAmount,
+            'final_amount' => $finalAmount,
+            'receipt_path' => $receiptPath,
+            'items' => $itemsPayload,
+            'cart' => $cart, // Store cart data for stock reduction
+        ];
 
-        // Clear cart after successful order creation
-        $request->session()->forget('cart');
+        // Store order data in cache with invoice_id as key (TTL: 24 hours)
+        \Illuminate\Support\Facades\Cache::put("pending_order_{$invoice->id}", $orderData, now()->addHours(24));
+        
+        // Also store in session as backup (for same-session callbacks)
+        $request->session()->put("pending_order_{$invoice->id}", $orderData);
 
         return response()->json([
             'success' => true,
-            'message' => 'سفارش با موفقیت ثبت شد',
-            'order' => [
-                'id' => $order->id,
-            ],
+            'message' => 'فاکتور ایجاد شد. لطفاً پرداخت را انجام دهید.',
             'invoice' => [
-                'id' => $order->invoice->id,
-                'invoice_number' => $order->invoice->invoice_number,
-                'amount' => $order->invoice->amount,
-                'status' => $order->invoice->status,
+                'id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'amount' => $invoice->amount,
+                'status' => $invoice->status,
             ]
         ]);
     }

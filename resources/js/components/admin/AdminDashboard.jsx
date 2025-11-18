@@ -69,6 +69,7 @@ function AdminDashboard() {
     const getStatusColor = (status) => {
         const colors = {
             'pending': 'text-orange-400',
+            'confirmed': 'text-emerald-400',
             'processing': 'text-blue-400',
             'shipped': 'text-purple-400',
             'delivered': 'text-green-400',
@@ -80,6 +81,7 @@ function AdminDashboard() {
     const getStatusText = (status) => {
         const texts = {
             'pending': 'در انتظار',
+            'confirmed': 'تایید شده',
             'processing': 'در حال پردازش',
             'shipped': 'ارسال شده',
             'delivered': 'تحویل داده شده',

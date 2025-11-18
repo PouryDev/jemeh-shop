@@ -427,4 +427,19 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class
     // Hero Slides
     Route::apiResource('hero-slides', \App\Http\Controllers\Api\AdminHeroSlideController::class);
     Route::post('/hero-slides/update-order', [\App\Http\Controllers\Api\AdminHeroSlideController::class, 'updateOrder']);
+    
+    // Payment Gateways
+    Route::apiResource('payment-gateways', \App\Http\Controllers\Api\AdminPaymentGatewayController::class);
+    Route::patch('/payment-gateways/{paymentGateway}/toggle', [\App\Http\Controllers\Api\AdminPaymentGatewayController::class, 'toggle']);
+    Route::put('/payment-gateways/{paymentGateway}/config', [\App\Http\Controllers\Api\AdminPaymentGatewayController::class, 'updateConfig']);
+});
+
+// Public payment routes
+Route::get('/payment/gateways', [\App\Http\Controllers\Api\PaymentController::class, 'gateways']);
+
+// Protected payment routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/payment/initiate', [\App\Http\Controllers\Api\PaymentController::class, 'initiate']);
+    Route::post('/payment/verify', [\App\Http\Controllers\Api\PaymentController::class, 'verify']);
+    Route::get('/payment/status/{transaction}', [\App\Http\Controllers\Api\PaymentController::class, 'status']);
 });
