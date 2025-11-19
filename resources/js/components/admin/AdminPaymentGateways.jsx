@@ -399,6 +399,7 @@ function AdminPaymentGateways() {
                                     <option value="">انتخاب کنید</option>
                                     <option value="zarinpal">زرین‌پال</option>
                                     <option value="card_to_card">کارت به کارت</option>
+                                    <option value="zibal">زیبال</option>
                                 </select>
                             </div>
                             <div>
