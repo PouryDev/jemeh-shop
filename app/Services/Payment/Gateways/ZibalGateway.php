@@ -80,11 +80,6 @@ class ZibalGateway implements PaymentGatewayInterface
 
             $responseData = $response->json();
 
-            Log::info('Zibal request response', [
-                'response' => $responseData,
-                'invoice_id' => $invoice->id,
-            ]);
-
             if (isset($responseData['result']) && $responseData['result'] == 100 && isset($responseData['trackId'])) {
                 $trackId = $responseData['trackId'];
                 $paymentUrl = self::PAYMENT_URL . $trackId;
@@ -178,19 +173,65 @@ class ZibalGateway implements PaymentGatewayInterface
 
             $responseData = $response->json();
 
-            if (isset($responseData['result']) && $responseData['result'] == 100) {
-                return [
-                    'success' => true,
-                    'verified' => true,
-                    'message' => 'پرداخت با موفقیت تایید شد',
-                    'data' => [
-                        'refNumber' => $responseData['refNumber'] ?? null,
-                        'cardNumber' => $responseData['cardNumber'] ?? null,
-                        'status' => $responseData['status'] ?? null,
-                    ],
-                ];
+            // Check if result is 100 (success) or 201 (previously verified)
+            // Status: 1 = paid, 2 = paid (already verified), 3 = failed, 4 = cancelled
+            // Result: 100 = success, 201 = previously verified (also success)
+            $result = $responseData['result'] ?? 0;
+            
+            if ($result == 100 || $result == 201) {
+                // 201 means payment was already verified (successful duplicate verification)
+                if ($result == 201) {
+                    return [
+                        'success' => true,
+                        'verified' => true,
+                        'message' => 'پرداخت قبلاً تایید شده است',
+                        'data' => [
+                            'refNumber' => $responseData['refNumber'] ?? null,
+                            'cardNumber' => $responseData['cardNumber'] ?? null,
+                            'status' => $responseData['status'] ?? null,
+                        ],
+                    ];
+                }
+                
+                // Result is 100, check status if exists
+                $status = $responseData['status'] ?? null;
+                
+                // If status exists, check it (1 or 2 means successful)
+                // If status doesn't exist, result == 100 is enough
+                if ($status === null || $status == 1 || $status == 2) {
+                    return [
+                        'success' => true,
+                        'verified' => true,
+                        'message' => 'پرداخت با موفقیت تایید شد',
+                        'data' => [
+                            'refNumber' => $responseData['refNumber'] ?? null,
+                            'cardNumber' => $responseData['cardNumber'] ?? null,
+                            'status' => $status,
+                        ],
+                    ];
+                } else {
+                    // Payment was not successful based on status
+                    Log::warning('Zibal verify: result is 100 but status indicates failure', [
+                        'status' => $status,
+                        'response' => $responseData,
+                        'transaction_id' => $transaction->id,
+                    ]);
+
+                    return [
+                        'success' => false,
+                        'verified' => false,
+                        'message' => 'پرداخت انجام نشده است (وضعیت: ' . $status . ')',
+                        'data' => [],
+                    ];
+                }
             } else {
-                $errorMessage = $this->getErrorMessage($responseData['result'] ?? 0);
+                $errorMessage = $this->getErrorMessage($result);
+
+                Log::warning('Zibal verify failed', [
+                    'result' => $result,
+                    'response' => $responseData,
+                    'transaction_id' => $transaction->id,
+                ]);
 
                 return [
                     'success' => false,
@@ -220,10 +261,6 @@ class ZibalGateway implements PaymentGatewayInterface
     public function callback(array $callbackData): array
     {
         try {
-            Log::info('Zibal callback received', [
-                'callback_data' => $callbackData,
-            ]);
-
             // Zibal sends success as string "1" or "0" in GET parameters
             $success = $callbackData['success'] ?? null;
             $trackId = $callbackData['trackId'] ?? null;
