@@ -43,7 +43,7 @@ class ZibalGateway implements PaymentGatewayInterface
                 ];
             }
 
-            $callbackUrl = $additionalData['callback_url'] ?? route('payment.callback', ['gateway' => 'zibal']);
+            $callbackUrl = $additionalData['callback_url'] ?? url(route('payment.callback', ['gateway' => 'zibal'], false));
             $description = $additionalData['description'] ?? "پرداخت فاکتور {$invoice->invoice_number}";
 
             // Convert Toman to Rials (Zibal uses Rials)
@@ -80,7 +80,12 @@ class ZibalGateway implements PaymentGatewayInterface
 
             $responseData = $response->json();
 
-            if (isset($responseData['result']) && $responseData['result'] == 100) {
+            Log::info('Zibal request response', [
+                'response' => $responseData,
+                'invoice_id' => $invoice->id,
+            ]);
+
+            if (isset($responseData['result']) && $responseData['result'] == 100 && isset($responseData['trackId'])) {
                 $trackId = $responseData['trackId'];
                 $paymentUrl = self::PAYMENT_URL . $trackId;
 
@@ -215,12 +220,18 @@ class ZibalGateway implements PaymentGatewayInterface
     public function callback(array $callbackData): array
     {
         try {
-            $status = $callbackData['status'] ?? null;
-            $trackId = $callbackData['trackId'] ?? null;
-            $success = $callbackData['success'] ?? null;
+            Log::info('Zibal callback received', [
+                'callback_data' => $callbackData,
+            ]);
 
-            // Zibal returns status=1 for success, or success=true
-            if (($status != 1 && $success !== true) || empty($trackId)) {
+            // Zibal sends success as string "1" or "0" in GET parameters
+            $success = $callbackData['success'] ?? null;
+            $trackId = $callbackData['trackId'] ?? null;
+
+            // Check if payment was successful (success can be "1", 1, true, or "true")
+            $isSuccess = $success === '1' || $success === 1 || $success === true || $success === 'true';
+
+            if (!$isSuccess || empty($trackId)) {
                 return [
                     'success' => false,
                     'transaction_id' => null,
