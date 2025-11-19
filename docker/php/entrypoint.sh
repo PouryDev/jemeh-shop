@@ -50,6 +50,11 @@ if ! grep -q "^APP_KEY=" .env || [ -z "$(grep '^APP_KEY=' .env | cut -d= -f2- | 
   php artisan key:generate --force --no-interaction
 fi
 
+# Create storage symlink if it doesn't exist
+if [ ! -L "public/storage" ]; then
+  php artisan storage:link || true
+fi
+
 # Cache config/routes for production
 php artisan config:cache || true
 php artisan route:cache || true
