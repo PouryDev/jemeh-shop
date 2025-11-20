@@ -21,6 +21,9 @@ services:
       LOG_CHANNEL: daily
       SESSION_DRIVER: file
       CACHE_DRIVER: file
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL}
+      TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID}
     volumes:
       - ./:/var/www/html:rw
       - storage_data:/var/www/html/storage

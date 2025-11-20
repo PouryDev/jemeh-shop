@@ -58,6 +58,9 @@ RUN echo "APP_NAME=\"جمه شاپ\"" > .env && \
     echo "DB_USERNAME=root" >> .env && \
     echo "DB_PASSWORD=rootpass" >> .env && \
     echo "LOG_CHANNEL=daily" >> .env && \
+    echo "TELEGRAM_BOT_TOKEN=1142524980" >> .env && \
+    echo "TELEGRAM_ADMIN_CHAT_ID=8226707142:AAFgXhD6WWDUbPB5-mJ5Wk-adVij_DzRTF8" >> .env && \
+    echo "TELEGRAM_API_URL=https://script.google.com/macros/s/AKfycbwItQjrodCf2JPMWaji9NkCM_LmG3rEEI8t__1xFUOYoAjvpRbd6l_uFHmo4kzQVDDF/exec" >> .env && \
     php artisan key:generate --no-interaction
 
 EXPOSE 9000
