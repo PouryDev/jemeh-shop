@@ -22,7 +22,7 @@ function ThanksPage() {
                     },
                     credentials: 'same-origin',
                     body: JSON.stringify({
-                        invoice_number: invoiceId,
+                        invoice_id: invoiceId,
                     }),
                 });
                 
