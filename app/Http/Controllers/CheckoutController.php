@@ -344,11 +344,23 @@ class CheckoutController extends Controller
      */
     private function sendOrderNotification(Order $order): void
     {
+        logger()->info('[CheckoutController][sendOrderNotification] Starting notification process', [
+            'order_id' => $order->id,
+        ]);
+
         $adminChatId = config('telegram.admin_chat_id');
         
         if (!$adminChatId) {
+            logger()->warning('[CheckoutController][sendOrderNotification] Admin chat ID is not configured', [
+                'order_id' => $order->id,
+            ]);
             return;
         }
+
+        logger()->info('[CheckoutController][sendOrderNotification] Admin chat ID found', [
+            'order_id' => $order->id,
+            'admin_chat_id' => $adminChatId,
+        ]);
 
         try {
             // Load order relationships for message formatting
@@ -373,13 +385,32 @@ class CheckoutController extends Controller
                 $message .= "📎 فایل رسید: دارد\n";
             }
 
+            logger()->info('[CheckoutController][sendOrderNotification] Sending message via Telegram', [
+                'order_id' => $order->id,
+                'admin_chat_id' => $adminChatId,
+                'message_length' => strlen($message),
+            ]);
+
             $telegramClient = new TelegramClient();
-            $telegramClient->sendMessage((int) $adminChatId, $message);
+            $result = $telegramClient->sendMessage((int) $adminChatId, $message);
+            
+            if ($result) {
+                logger()->info('[CheckoutController][sendOrderNotification] Message sent successfully', [
+                    'order_id' => $order->id,
+                ]);
+            } else {
+                logger()->error('[CheckoutController][sendOrderNotification] sendMessage returned false', [
+                    'order_id' => $order->id,
+                ]);
+            }
         } catch (\Exception $e) {
             // Log error but don't fail order creation
             logger()->error('[CheckoutController][sendOrderNotification][TELEGRAM] Failed to send order notification', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
