@@ -22,7 +22,7 @@ services:
       SESSION_DRIVER: file
       CACHE_DRIVER: file
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN-8226707142:AAFgXhD6WWDUbPB5-mJ5Wk-adVij_DzRTF8}
-      TELEGRAM_API_URL: ${TELEGRAM_API_URL-https://script.google.com/macros/s/AKfycbwItQjrodCf2JPMWaji9NkCM_LmG3rEEI8t__1xFUOYoAjvpRbd6l_uFHmo4kzQVDDF/exec}
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL-https://snowy-tree-5c79.pk74ever.workers.dev}
       TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID-1142524980}
     volumes:
       - ./:/var/www/html:rw
