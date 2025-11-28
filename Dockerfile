@@ -60,7 +60,7 @@ RUN echo "APP_NAME=\"جمه شاپ\"" > .env && \
     echo "LOG_CHANNEL=daily" >> .env && \
     echo "TELEGRAM_BOT_TOKEN=8226707142:AAFgXhD6WWDUbPB5-mJ5Wk-adVij_DzRTF8" >> .env && \
     echo "TELEGRAM_ADMIN_CHAT_ID=1142524980" >> .env && \
-    echo "TELEGRAM_API_URL=https://snowy-tree-5c79.pk74ever.workers.dev" >> .env && \
+    echo "TELEGRAM_PROXY_URL=https://snowy-tree-5c79.pk74ever.workers.dev" >> .env && \
     php artisan key:generate --no-interaction
 
 EXPOSE 9000
