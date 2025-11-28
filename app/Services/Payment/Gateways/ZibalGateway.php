@@ -211,12 +211,6 @@ class ZibalGateway implements PaymentGatewayInterface
                     ];
                 } else {
                     // Payment was not successful based on status
-                    Log::warning('Zibal verify: result is 100 but status indicates failure', [
-                        'status' => $status,
-                        'response' => $responseData,
-                        'transaction_id' => $transaction->id,
-                    ]);
-
                     return [
                         'success' => false,
                         'verified' => false,
@@ -226,12 +220,6 @@ class ZibalGateway implements PaymentGatewayInterface
                 }
             } else {
                 $errorMessage = $this->getErrorMessage($result);
-
-                Log::warning('Zibal verify failed', [
-                    'result' => $result,
-                    'response' => $responseData,
-                    'transaction_id' => $transaction->id,
-                ]);
 
                 return [
                     'success' => false,

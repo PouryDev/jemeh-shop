@@ -394,7 +394,6 @@ class PaymentService
         $adminChatId = config('telegram.admin_chat_id');
         
         if (!$adminChatId) {
-            Log::warning('[TELEGRAM] Admin chat ID not configured, skipping notification');
             return;
         }
 
