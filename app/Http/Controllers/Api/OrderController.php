@@ -382,8 +382,23 @@ class OrderController extends Controller
                 $message .= "📎 فایل رسید: دارد\n";
             }
 
+            // Build admin order detail URL
+            $adminOrderUrl = url('/admin/orders/' . $order->id);
+
+            // Create inline keyboard with order detail button
+            $replyMarkup = [
+                'inline_keyboard' => [
+                    [
+                        [
+                            'text' => '🔍 مشاهده جزئیات سفارش',
+                            'url' => $adminOrderUrl,
+                        ],
+                    ],
+                ],
+            ];
+
             $telegramClient = new TelegramClient();
-            $telegramClient->sendMessage((int) $adminChatId, $message);
+            $telegramClient->sendMessage((int) $adminChatId, $message, $replyMarkup);
         } catch (\Exception $e) {
             // Log error but don't fail order creation
             logger()->error('[OrderController][sendOrderNotification][TELEGRAM] Failed to send order notification', [
