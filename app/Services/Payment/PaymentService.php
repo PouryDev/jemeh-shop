@@ -122,6 +122,12 @@ class PaymentService
      */
     public function verifyPayment(Transaction $transaction, array $callbackData = []): array
     {
+        Log::info('[PaymentService][verifyPayment] Starting payment verification', [
+            'transaction_id' => $transaction->id,
+            'invoice_id' => $transaction->invoice_id,
+            'gateway_id' => $transaction->gateway_id,
+        ]);
+
         try {
             if (!$transaction->gateway_id) {
                 return [
@@ -186,6 +192,12 @@ class PaymentService
                         'final_amount' => $orderData['final_amount'],
                         'status' => 'confirmed', // Order is confirmed after payment verification
                         'receipt_path' => $orderData['receipt_path'],
+                    ]);
+
+                    Log::info('[PaymentService][verifyPayment] Order created successfully', [
+                        'order_id' => $order->id,
+                        'invoice_id' => $invoice->id,
+                        'transaction_id' => $transaction->id,
                     ]);
 
                     // Link Order to Invoice
@@ -276,12 +288,22 @@ class PaymentService
                 try {
                     $order = $invoice->fresh()->order;
                     if ($order) {
+                        Log::info('[PaymentService][verifyPayment] Sending notification for verified payment', [
+                            'order_id' => $order->id,
+                            'invoice_id' => $invoice->id,
+                        ]);
                         $this->sendOrderNotification($order);
+                    } else {
+                        Log::warning('[PaymentService][verifyPayment] Order not found for invoice', [
+                            'invoice_id' => $invoice->id,
+                        ]);
                     }
                 } catch (\Exception $e) {
-                    Log::error('Failed to send order notification', [
+                    Log::error('[PaymentService][verifyPayment] Failed to send order notification', [
                         'error' => $e->getMessage(),
                         'invoice_id' => $invoice->id,
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
                     ]);
                 }
 
@@ -391,11 +413,23 @@ class PaymentService
      */
     private function sendOrderNotification(Order $order): void
     {
+        Log::info('[PaymentService][sendOrderNotification] Starting notification process', [
+            'order_id' => $order->id,
+        ]);
+
         $adminChatId = config('telegram.admin_chat_id');
         
         if (!$adminChatId) {
+            Log::warning('[PaymentService][sendOrderNotification] Admin chat ID is not configured', [
+                'order_id' => $order->id,
+            ]);
             return;
         }
+
+        Log::info('[PaymentService][sendOrderNotification] Admin chat ID found', [
+            'order_id' => $order->id,
+            'admin_chat_id' => $adminChatId,
+        ]);
 
         try {
             // Load order relationships for message formatting
@@ -420,13 +454,32 @@ class PaymentService
                 $message .= "📎 فایل رسید: دارد\n";
             }
 
+            Log::info('[PaymentService][sendOrderNotification] Sending message via Telegram', [
+                'order_id' => $order->id,
+                'admin_chat_id' => $adminChatId,
+                'message_length' => strlen($message),
+            ]);
+
             $telegramClient = new TelegramClient();
-            $telegramClient->sendMessage((int) $adminChatId, $message);
+            $result = $telegramClient->sendMessage((int) $adminChatId, $message);
+            
+            if ($result) {
+                Log::info('[PaymentService][sendOrderNotification] Message sent successfully', [
+                    'order_id' => $order->id,
+                ]);
+            } else {
+                Log::error('[PaymentService][sendOrderNotification] sendMessage returned false', [
+                    'order_id' => $order->id,
+                ]);
+            }
         } catch (\Exception $e) {
             // Log error but don't fail order creation
             Log::error('[PaymentService][sendOrderNotification][TELEGRAM] Failed to send order notification', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }

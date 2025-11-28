@@ -127,6 +127,11 @@ class CheckoutController extends Controller
 
     public function place(Request $request)
     {
+        logger()->info('[CheckoutController][place] Starting checkout process', [
+            'payment_gateway_id' => $request->input('payment_gateway_id'),
+            'is_api_request' => $request->expectsJson(),
+        ]);
+
         try {
             $data = $request->validate([
                 'customer_name' => 'required|string|max:255',
