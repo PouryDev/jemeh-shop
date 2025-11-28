@@ -268,6 +268,110 @@ class OrderController extends Controller
     }
 
     /**
+     * Send Telegram notification for an order based on invoice
+     * This endpoint is called from the Thanks page
+     */
+    public function sendNotification(Request $request)
+    {
+        logger()->info('[OrderController][sendNotification] Starting notification request', [
+            'invoice_id' => $request->input('invoice_id'),
+            'invoice_number' => $request->input('invoice_number'),
+        ]);
+
+        $request->validate([
+            'invoice_id' => 'nullable|exists:invoices,id',
+            'invoice_number' => 'nullable|string',
+        ]);
+
+        $invoice = null;
+        
+        if ($request->has('invoice_id')) {
+            $invoice = \App\Models\Invoice::find($request->input('invoice_id'));
+        } elseif ($request->has('invoice_number')) {
+            $invoice = \App\Models\Invoice::where('invoice_number', $request->input('invoice_number'))->first();
+        }
+
+        if (!$invoice) {
+            logger()->warning('[OrderController][sendNotification] Invoice not found', [
+                'invoice_id' => $request->input('invoice_id'),
+                'invoice_number' => $request->input('invoice_number'),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'فاکتور یافت نشد'
+            ], 404);
+        }
+
+        logger()->info('[OrderController][sendNotification] Invoice found', [
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+        ]);
+
+        // Check if notification already sent in this session
+        $notificationKey = "telegram_notification_sent_{$invoice->id}";
+        if ($request->session()->has($notificationKey)) {
+            logger()->info('[OrderController][sendNotification] Notification already sent in session', [
+                'invoice_id' => $invoice->id,
+            ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification already sent',
+                'already_sent' => true,
+            ]);
+        }
+
+        // Find order for this invoice
+        $order = $invoice->order;
+        
+        if (!$order) {
+            logger()->warning('[OrderController][sendNotification] Order not found for invoice', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'سفارش یافت نشد'
+            ], 404);
+        }
+
+        logger()->info('[OrderController][sendNotification] Order found, sending notification', [
+            'order_id' => $order->id,
+            'invoice_id' => $invoice->id,
+        ]);
+
+        // Send notification
+        try {
+            $this->sendOrderNotification($order);
+            
+            // Mark as sent in session (expires when session expires)
+            $request->session()->put($notificationKey, true);
+            
+            logger()->info('[OrderController][sendNotification] Notification sent and marked in session', [
+                'order_id' => $order->id,
+                'invoice_id' => $invoice->id,
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification sent successfully'
+            ]);
+        } catch (\Exception $e) {
+            logger()->error('[OrderController][sendNotification] Failed to send notification', [
+                'order_id' => $order->id,
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ارسال notification: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Send Telegram notification when a new order is created
      */
     private function sendOrderNotification(Order $order): void

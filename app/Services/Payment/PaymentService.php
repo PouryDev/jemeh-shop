@@ -12,7 +12,6 @@ use App\Models\Transaction;
 use App\Services\Payment\PaymentGatewayFactory;
 use App\Services\CampaignService;
 use App\Services\DiscountCodeService;
-use App\Services\Telegram\Client as TelegramClient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
@@ -284,28 +283,7 @@ class PaymentService
                 // Clear cart after successful payment verification and order creation
                 Session::forget('cart');
 
-                // Send Telegram notification to admins
-                try {
-                    $order = $invoice->fresh()->order;
-                    if ($order) {
-                        Log::info('[PaymentService][verifyPayment] Sending notification for verified payment', [
-                            'order_id' => $order->id,
-                            'invoice_id' => $invoice->id,
-                        ]);
-                        $this->sendOrderNotification($order);
-                    } else {
-                        Log::warning('[PaymentService][verifyPayment] Order not found for invoice', [
-                            'invoice_id' => $invoice->id,
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    Log::error('[PaymentService][verifyPayment] Failed to send order notification', [
-                        'error' => $e->getMessage(),
-                        'invoice_id' => $invoice->id,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]);
-                }
+                // Notification will be sent from Thanks page when user visits it
 
                 return [
                     'success' => true,
@@ -405,97 +383,7 @@ class PaymentService
      */
     public function getActiveGateways()
     {
-        return PaymentGateway::active()->ordered()->get();
-    }
-
-    /**
-     * Send Telegram notification when a new order is created
-     */
-    private function sendOrderNotification(Order $order): void
-    {
-        Log::info('[PaymentService][sendOrderNotification] Starting notification process', [
-            'order_id' => $order->id,
-        ]);
-
-        $adminChatId = config('telegram.admin_chat_id');
-        
-        if (!$adminChatId) {
-            Log::warning('[PaymentService][sendOrderNotification] Admin chat ID is not configured', [
-                'order_id' => $order->id,
-            ]);
-            return;
-        }
-
-        Log::info('[PaymentService][sendOrderNotification] Admin chat ID found', [
-            'order_id' => $order->id,
-            'admin_chat_id' => $adminChatId,
-        ]);
-
-        try {
-            // Load order relationships for message formatting
-            $order->load(['items.product', 'invoice']);
-            
-            // Format message in Persian
-            $itemsCount = $order->items->count();
-            $totalAmount = number_format($order->total_amount) . ' تومان';
-            $invoiceNumber = $order->invoice->invoice_number ?? 'N/A';
-            
-            $message = "🛒 سفارش جدید ثبت شد\n\n";
-            $message .= "📋 شماره سفارش: #{$order->id}\n";
-            $message .= "🧾 شماره فاکتور: {$invoiceNumber}\n";
-            $message .= "👤 نام مشتری: {$order->customer_name}\n";
-            $message .= "📞 تلفن: {$order->customer_phone}\n";
-            $message .= "📍 آدرس: {$order->customer_address}\n";
-            $message .= "📦 تعداد اقلام: {$itemsCount}\n";
-            $message .= "💰 مبلغ کل: {$totalAmount}\n";
-            $message .= "📊 وضعیت: " . $this->getStatusLabel($order->status) . "\n";
-            
-            if ($order->receipt_path) {
-                $message .= "📎 فایل رسید: دارد\n";
-            }
-
-            Log::info('[PaymentService][sendOrderNotification] Sending message via Telegram', [
-                'order_id' => $order->id,
-                'admin_chat_id' => $adminChatId,
-                'message_length' => strlen($message),
-            ]);
-
-            $telegramClient = new TelegramClient();
-            $result = $telegramClient->sendMessage((int) $adminChatId, $message);
-            
-            if ($result) {
-                Log::info('[PaymentService][sendOrderNotification] Message sent successfully', [
-                    'order_id' => $order->id,
-                ]);
-            } else {
-                Log::error('[PaymentService][sendOrderNotification] sendMessage returned false', [
-                    'order_id' => $order->id,
-                ]);
-            }
-        } catch (\Exception $e) {
-            // Log error but don't fail order creation
-            Log::error('[PaymentService][sendOrderNotification][TELEGRAM] Failed to send order notification', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-        }
-    }
-
-    /**
-     * Get Persian label for order status
-     */
-    private function getStatusLabel(string $status): string
-    {
-        return match ($status) {
-            'pending' => 'در انتظار',
-            'confirmed' => 'تایید شده',
-            'shipped' => 'ارسال شده',
-            'cancelled' => 'لغو شده',
-            default => $status,
-        };
+return PaymentGateway::active()->ordered()->get();
     }
 }
 
