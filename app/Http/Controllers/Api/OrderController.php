@@ -273,11 +273,6 @@ class OrderController extends Controller
      */
     public function sendNotification(Request $request)
     {
-        logger()->info('[OrderController][sendNotification] Starting notification request', [
-            'invoice_id' => $request->input('invoice_id'),
-            'invoice_number' => $request->input('invoice_number'),
-        ]);
-
         $request->validate([
             'invoice_id' => 'nullable|exists:invoices,id',
             'invoice_number' => 'nullable|string',
@@ -302,17 +297,9 @@ class OrderController extends Controller
             ], 404);
         }
 
-        logger()->info('[OrderController][sendNotification] Invoice found', [
-            'invoice_id' => $invoice->id,
-            'invoice_number' => $invoice->invoice_number,
-        ]);
-
         // Check if notification already sent in this session
         $notificationKey = "telegram_notification_sent_{$invoice->id}";
         if ($request->session()->has($notificationKey)) {
-            logger()->info('[OrderController][sendNotification] Notification already sent in session', [
-                'invoice_id' => $invoice->id,
-            ]);
             return response()->json([
                 'success' => true,
                 'message' => 'Notification already sent',
@@ -334,22 +321,12 @@ class OrderController extends Controller
             ], 404);
         }
 
-        logger()->info('[OrderController][sendNotification] Order found, sending notification', [
-            'order_id' => $order->id,
-            'invoice_id' => $invoice->id,
-        ]);
-
         // Send notification
         try {
             $this->sendOrderNotification($order);
             
             // Mark as sent in session (expires when session expires)
             $request->session()->put($notificationKey, true);
-            
-            logger()->info('[OrderController][sendNotification] Notification sent and marked in session', [
-                'order_id' => $order->id,
-                'invoice_id' => $invoice->id,
-            ]);
             
             return response()->json([
                 'success' => true,
