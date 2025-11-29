@@ -121,12 +121,6 @@ class PaymentService
      */
     public function verifyPayment(Transaction $transaction, array $callbackData = []): array
     {
-        Log::info('[PaymentService][verifyPayment] Starting payment verification', [
-            'transaction_id' => $transaction->id,
-            'invoice_id' => $transaction->invoice_id,
-            'gateway_id' => $transaction->gateway_id,
-        ]);
-
         try {
             if (!$transaction->gateway_id) {
                 return [
@@ -192,13 +186,7 @@ class PaymentService
                         'status' => 'pending', // Order starts as pending after payment verification
                         'receipt_path' => $orderData['receipt_path'],
                     ]);
-
-                    Log::info('[PaymentService][verifyPayment] Order created successfully', [
-                        'order_id' => $order->id,
-                        'invoice_id' => $invoice->id,
-                        'transaction_id' => $transaction->id,
-                    ]);
-
+                    
                     // Link Order to Invoice
                     $invoice->update([
                         'order_id' => $order->id,
