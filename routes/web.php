@@ -1,71 +1,50 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
+use App\Http\Middleware\EnsureUserIsSuperAdmin;
 
-use App\Http\Controllers\ShopController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Http\Controllers\Admin\DiscountCodeController as AdminDiscountCodeController;
-use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
-use App\Http\Controllers\Admin\ColorController as AdminColorController;
-use App\Http\Controllers\Admin\SizeController as AdminSizeController;
-use App\Http\Controllers\Admin\ProductVariantController as AdminProductVariantController;
-use App\Http\Controllers\Admin\DeliveryMethodController as AdminDeliveryMethodController;
-use App\Http\Middleware\EnsureUserIsAdmin;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\AccountController;
-use Illuminate\Support\Facades\Auth;
+/*
+|--------------------------------------------------------------------------
+| Platform Routes (Central Domain)
+|--------------------------------------------------------------------------
+|
+| These routes are loaded for the central platform domain. These routes
+| handle tenant registration, management, and super-admin functionality.
+|
+*/
 
-// Test session route
-Route::get('/test-session', function () {
-    return response()->json([
-        'session_id' => session()->getId(),
-        'is_authenticated' => Auth::check(),
-        'user_id' => Auth::id(),
-        'user' => Auth::user(),
-    ]);
+// Landing page - show when no tenant is detected
+Route::get('/', function () {
+    return view('landing');
+})->name('landing');
+
+// Platform authentication routes
+Route::post('/platform/login', [\App\Http\Controllers\Platform\AuthController::class, 'login'])->name('platform.auth.login');
+Route::post('/platform/register', [\App\Http\Controllers\Platform\AuthController::class, 'register'])->name('platform.auth.register');
+Route::post('/platform/logout', [\App\Http\Controllers\Platform\AuthController::class, 'logout'])->name('platform.auth.logout');
+
+// Platform tenant management (for users to manage their tenants)
+Route::middleware('auth:sanctum')->prefix('platform')->name('platform.')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\Platform\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/tenants', [\App\Http\Controllers\Platform\TenantController::class, 'index'])->name('tenants.index');
+    Route::post('/tenants', [\App\Http\Controllers\Platform\TenantController::class, 'store'])->name('tenants.store');
+    Route::get('/tenants/{tenant}', [\App\Http\Controllers\Platform\TenantController::class, 'show'])->name('tenants.show');
+    Route::put('/tenants/{tenant}', [\App\Http\Controllers\Platform\TenantController::class, 'update'])->name('tenants.update');
+    Route::delete('/tenants/{tenant}', [\App\Http\Controllers\Platform\TenantController::class, 'destroy'])->name('tenants.destroy');
 });
 
-// React app routes
-Route::get('/checkout', function () {
-    return view('react-app');
-})->name('checkout.index');
-Route::get('/account', function () {
-    return view('react-app');
-})->name('account.index');
-Route::get('/account/*', function () {
-    return view('react-app');
+// Super Admin routes
+Route::middleware(['auth:sanctum', EnsureUserIsSuperAdmin::class])->prefix('super-admin')->name('super-admin.')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'dashboard'])->name('dashboard');
+    Route::get('/tenants', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'index'])->name('tenants.index');
+    Route::get('/tenants/{tenant}', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'show'])->name('tenants.show');
+    Route::put('/tenants/{tenant}', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'update'])->name('tenants.update');
+    Route::delete('/tenants/{tenant}', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'destroy'])->name('tenants.destroy');
+    Route::post('/tenants/{tenant}/activate', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'activate'])->name('tenants.activate');
+    Route::post('/tenants/{tenant}/deactivate', [\App\Http\Controllers\SuperAdmin\TenantManagementController::class, 'deactivate'])->name('tenants.deactivate');
 });
 
-// Auth routes (legacy - not used by React app)
-Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
-Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
-Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
-
-// Admin area (React app)
-Route::middleware([EnsureUserIsAdmin::class])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', function () {
-        return view('react-app');
-    })->name('dashboard');
-    Route::get('/*', function () {
-        return view('react-app');
-    });
-});
-
-// Account API routes (for React to use)
-Route::middleware('auth')->group(function () {
-    Route::post('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
-    Route::post('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
-});
-
-// Payment callback route (for gateway redirects)
-Route::get('/payment/callback/{gateway}', [\App\Http\Controllers\Api\PaymentController::class, 'callback'])
-    ->name('payment.callback');
-
-// React SPA route - catch all for frontend routes (must be last)
+// React app route for platform (catch all - must be last)
 Route::get('/{any}', function () {
     return view('react-app');
-})->where('any', '.*')->name('react-app');
+})->where('any', '.*')->name('platform-app');

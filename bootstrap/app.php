@@ -10,6 +10,17 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            // Register tenant routes
+            Route::middleware([
+                \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
+                \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
+            ])->group(base_path('routes/tenant.php'));
+            
+            Route::middleware([
+                \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
+            ])->prefix('api')->group(base_path('routes/tenant-api.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Register global middleware to convert Persian numbers to English

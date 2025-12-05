@@ -7,8 +7,11 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\Size;
+use App\Services\PlanService;
+use App\Services\UsageTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class AdminProductController extends Controller
 {
@@ -37,6 +40,23 @@ class AdminProductController extends Controller
 
     public function store(Request $request)
     {
+        // Check plan limits if in tenant context
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            $planService = new PlanService();
+            $check = $planService->canCreateProduct($tenant);
+            
+            if (!$check['allowed']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $check['message'],
+                    'limit_reached' => true,
+                    'current' => $check['current'] ?? null,
+                    'limit' => $check['limit'] ?? null,
+                ], 403);
+            }
+        }
+
         $data = $request->validate([
             'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
@@ -69,6 +89,28 @@ class AdminProductController extends Controller
         
         $product = Product::create($data);
 
+        // Track storage usage for images
+        $usageTrackingService = new UsageTrackingService();
+        $planService = new PlanService();
+        
+        if ($request->hasFile('images') && Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            foreach ($request->file('images') as $file) {
+                $fileSize = $file->getSize();
+                $check = $planService->canUploadFile($tenant, $fileSize);
+                
+                if (!$check['allowed']) {
+                    // Delete the product if storage limit reached
+                    $product->delete();
+                    return response()->json([
+                        'success' => false,
+                        'message' => $check['message'],
+                        'limit_reached' => true,
+                    ], 403);
+                }
+            }
+        }
+
         // Handle images
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $file) {
@@ -77,7 +119,19 @@ class AdminProductController extends Controller
                     'path' => $path,
                     'sort_order' => $index,
                 ]);
+                
+                // Track storage usage
+                if (Tenancy::initialized()) {
+                    $tenant = Tenancy::tenant();
+                    $usageTrackingService->addStorageUsage($tenant, $file->getSize());
+                }
             }
+        }
+
+        // Update product count
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            $usageTrackingService->updateProductCount($tenant);
         }
 
         // Handle variants
@@ -243,11 +297,25 @@ class AdminProductController extends Controller
         $product = Product::findOrFail($productId);
         $image = $product->images()->findOrFail($imageId);
 
-        // Delete from disk if it's a local file
-        if (!str_starts_with($image->path, 'http')) {
-            $filePath = storage_path('app/public/' . $image->path);
-            if (file_exists($filePath)) {
-                unlink($filePath);
+        // Track storage usage removal
+        $usageTrackingService = new UsageTrackingService();
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            if (!str_starts_with($image->path, 'http')) {
+                $filePath = storage_path('app/public/' . $image->path);
+                if (file_exists($filePath)) {
+                    $fileSize = filesize($filePath);
+                    $usageTrackingService->removeStorageUsage($tenant, $fileSize);
+                    unlink($filePath);
+                }
+            }
+        } else {
+            // Delete from disk if it's a local file
+            if (!str_starts_with($image->path, 'http')) {
+                $filePath = storage_path('app/public/' . $image->path);
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
             }
         }
 
@@ -263,6 +331,24 @@ class AdminProductController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+        
+        // Track storage usage removal for images
+        $usageTrackingService = new UsageTrackingService();
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            foreach ($product->images as $image) {
+                if (!str_starts_with($image->path, 'http')) {
+                    $filePath = storage_path('app/public/' . $image->path);
+                    if (file_exists($filePath)) {
+                        $fileSize = filesize($filePath);
+                        $usageTrackingService->removeStorageUsage($tenant, $fileSize);
+                    }
+                }
+            }
+            // Update product count
+            $usageTrackingService->updateProductCount($tenant);
+        }
+        
         $product->delete();
 
         return response()->json([

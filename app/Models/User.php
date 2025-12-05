@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -20,10 +21,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'email',
         'instagram_id',
         'phone',
         'password',
         'is_admin',
+        'is_super_admin',
         'address',
     ];
 
@@ -47,7 +50,40 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_super_admin' => 'boolean',
         ];
+    }
+
+    public function tenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class, 'tenant_users')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_super_admin ?? false;
+    }
+
+    public function isTenantAdmin(?Tenant $tenant = null): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($tenant) {
+            return $this->tenants()
+                ->where('tenants.id', $tenant->id)
+                ->wherePivot('role', 'admin')
+                ->exists();
+        }
+
+        if (tenancy()->initialized) {
+            return $this->isTenantAdmin(tenancy()->tenant);
+        }
+
+        return false;
     }
 
     public function discountCodeUsages(): HasMany

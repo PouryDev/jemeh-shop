@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\PlanService;
+use App\Services\UsageTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class ProductController extends Controller
 {
@@ -30,6 +33,17 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        // Check plan limits if in tenant context
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            $planService = new PlanService();
+            $check = $planService->canCreateProduct($tenant);
+            
+            if (!$check['allowed']) {
+                return back()->withErrors(['limit' => $check['message']]);
+            }
+        }
+
         $data = $request->validate([
             'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
@@ -46,6 +60,23 @@ class ProductController extends Controller
 
         $data['slug'] = $data['slug'] ?? Str::slug($data['title']).'-'.Str::random(4);
         $data['is_active'] = $request->boolean('is_active');
+        
+        $planService = new PlanService();
+        $usageTrackingService = new UsageTrackingService();
+        
+        // Check storage limits for images before creating product
+        if ($request->hasFile('images') && Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            foreach ($request->file('images') as $file) {
+                $fileSize = $file->getSize();
+                $check = $planService->canUploadFile($tenant, $fileSize);
+                
+                if (!$check['allowed']) {
+                    return back()->withErrors(['storage' => $check['message']]);
+                }
+            }
+        }
+        
         $product = Product::create($data);
 
         if ($request->hasFile('images')) {
@@ -56,7 +87,19 @@ class ProductController extends Controller
                     'path' => $path,
                     'sort_order' => $index,
                 ]);
+                
+                // Track storage usage
+                if (Tenancy::initialized()) {
+                    $tenant = Tenancy::tenant();
+                    $usageTrackingService->addStorageUsage($tenant, $file->getSize());
+                }
             }
+        }
+
+        // Update product count
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            $usageTrackingService->updateProductCount($tenant);
         }
 
         return redirect()->route('admin.products.index');
@@ -105,6 +148,23 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        // Track storage usage removal
+        $usageTrackingService = new UsageTrackingService();
+        if (Tenancy::initialized()) {
+            $tenant = Tenancy::tenant();
+            foreach ($product->images as $image) {
+                if (!str_starts_with($image->path, 'http')) {
+                    $filePath = storage_path('app/public/' . $image->path);
+                    if (file_exists($filePath)) {
+                        $fileSize = filesize($filePath);
+                        $usageTrackingService->removeStorageUsage($tenant, $fileSize);
+                    }
+                }
+            }
+            // Update product count
+            $usageTrackingService->updateProductCount($tenant);
+        }
+        
         $product->delete();
         return back();
     }
