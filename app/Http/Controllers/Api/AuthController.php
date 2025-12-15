@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\MerchantUser;
+use App\Models\Merchant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -79,7 +81,7 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         $user = $request->user();
-        
+
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -87,9 +89,28 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $data = $user->toArray();
+        $merchantID = $request->header('X-Merchant-Id');
+
+        if ($data['is_admin'] || is_null($merchantID)) {
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+            ]);
+        }
+
+        $merchant = Merchant::current();
+        if ($merchant) {
+            $user = MerchantUser::query()->where('user_id', $data['id'])
+                ->where('merchant_id', $merchant->id)
+                ->first();
+
+            $data['is_admin'] = $user->is_admin == 1;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $user
+            'data' => $data,
         ]);
     }
 }

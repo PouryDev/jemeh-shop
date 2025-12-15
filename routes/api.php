@@ -24,84 +24,100 @@ use App\Http\Controllers\Api\HeroSlideController;
 |
 */
 
-// Public API routes
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{product}', [ProductController::class, 'show']);
-Route::get('/campaigns/active', [CampaignController::class, 'active']);
-Route::get('/categories', [CategoryController::class, 'index']);
-Route::get('/hero-slides', [HeroSlideController::class, 'index']);
-Route::post('/hero-slides/{id}/click', [HeroSlideController::class, 'click']);
-// Public colors and sizes for filters
-Route::get('/colors', function () {
-    $colors = \App\Models\Color::where('is_active', true)->orderBy('name')->get();
-    return response()->json(['success' => true, 'data' => $colors]);
-});
-Route::get('/sizes', function () {
-    $sizes = \App\Models\Size::where('is_active', true)->orderBy('name')->get();
-    return response()->json(['success' => true, 'data' => $sizes]);
-});
+// Shop API routes - require merchant validation
+Route::middleware([\App\Http\Middleware\EnsureMerchantExists::class])->group(function () {
+    // Public API routes
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/{product}', [ProductController::class, 'show']);
+    Route::get('/campaigns/active', [CampaignController::class, 'active']);
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/hero-slides', [HeroSlideController::class, 'index']);
+    Route::post('/hero-slides/{id}/click', [HeroSlideController::class, 'click']);
+    // Public colors and sizes for filters
+    Route::get('/colors', function () {
+        $colors = \App\Models\Color::where('is_active', true)->orderBy('name')->get();
+        return response()->json(['success' => true, 'data' => $colors]);
+    });
+    Route::get('/sizes', function () {
+        $sizes = \App\Models\Size::where('is_active', true)->orderBy('name')->get();
+        return response()->json(['success' => true, 'data' => $sizes]);
+    });
 
-// Search endpoint for React
-Route::get('/search', [ProductController::class, 'search']);
+    // Search endpoint for React
+    Route::get('/search', [ProductController::class, 'search']);
 
-// New search endpoint for dropdown
-Route::get('/search/dropdown', [SearchController::class, 'search']);
+    // New search endpoint for dropdown
+    Route::get('/search/dropdown', [SearchController::class, 'search']);
 
-// Delivery methods (public - needed for checkout)
-Route::get('/delivery-methods', function () {
-    $deliveryMethods = \App\Models\DeliveryMethod::active()->ordered()->get();
-    return response()->json([
-        'success' => true,
-        'data' => $deliveryMethods
-    ]);
-});
+    // Delivery methods (public - needed for checkout)
+    Route::get('/delivery-methods', function () {
+        $deliveryMethods = \App\Models\DeliveryMethod::active()->ordered()->get();
+        return response()->json([
+            'success' => true,
+            'data' => $deliveryMethods
+        ]);
+    });
 
-// Auth routes (public - no authentication required)
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/register', [AuthController::class, 'register']);
-
-// Cart routes (public - no authentication required) - with session support
-Route::middleware([
-    \App\Http\Middleware\EncryptCookies::class,
-    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-    \Illuminate\Session\Middleware\StartSession::class,
-])->group(function () {
-    Route::get('/cart', [CartController::class, 'index']);
-    Route::get('/cart/json', [CartController::class, 'summary']);
-    Route::post('/cart/add/{product}', [CartController::class, 'add']);
-    Route::put('/cart/update', [CartController::class, 'update']);
-    Route::delete('/cart/remove/{cartKey}', [CartController::class, 'remove']);
-    Route::delete('/cart/clear', [CartController::class, 'clear']);
-    
-    // Order notification route (public, uses session)
-    Route::post('/orders/send-notification', [OrderController::class, 'sendNotification']);
-});
-
-// Protected routes (using Sanctum for authentication)
-Route::middleware('auth:sanctum')->group(function () {
-    // Auth routes that require authentication
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/auth/user', [AuthController::class, 'user']);
-    
-    // Order routes
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::post('/orders', [OrderController::class, 'store']);
-    Route::post('/checkout', [OrderController::class, 'checkout'])->middleware([
+    // Cart routes (public - no authentication required) - with session support
+    Route::middleware([
         \App\Http\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \Illuminate\Session\Middleware\StartSession::class,
-    ]);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
-    
-    // User profile routes
-    Route::get('/user/profile', [UserController::class, 'profile']);
-    Route::put('/user/profile', [UserController::class, 'updateProfile']);
-    Route::get('/user/orders', [UserController::class, 'orders']);
-    Route::get('/user/stats', [UserController::class, 'stats']);
-     
-    // Address management
-    Route::apiResource('addresses', \App\Http\Controllers\Api\AddressController::class);
-    Route::post('/addresses/{address}/set-default', [\App\Http\Controllers\Api\AddressController::class, 'setDefault']);
+    ])->group(function () {
+        Route::get('/cart', [CartController::class, 'index']);
+        Route::get('/cart/json', [CartController::class, 'summary']);
+        Route::post('/cart/add/{product}', [CartController::class, 'add']);
+        Route::put('/cart/update', [CartController::class, 'update']);
+        Route::delete('/cart/remove/{cartKey}', [CartController::class, 'remove']);
+        Route::delete('/cart/clear', [CartController::class, 'clear']);
+        
+        // Order notification route (public, uses session)
+        Route::post('/orders/send-notification', [OrderController::class, 'sendNotification']);
+    });
+
+    // Protected routes (using Sanctum for authentication)
+    Route::middleware('auth:sanctum')->group(function () {
+        // Auth routes that require authentication
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::get('/auth/user', [AuthController::class, 'user']);
+        
+        // Order routes
+        Route::get('/orders', [OrderController::class, 'index']);
+        Route::post('/orders', [OrderController::class, 'store']);
+        Route::post('/checkout', [OrderController::class, 'checkout'])->middleware([
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+        ]);
+        Route::get('/orders/{order}', [OrderController::class, 'show']);
+        
+        // User profile routes
+        Route::get('/user/profile', [UserController::class, 'profile']);
+        Route::put('/user/profile', [UserController::class, 'updateProfile']);
+        Route::get('/user/orders', [UserController::class, 'orders']);
+        Route::get('/user/stats', [UserController::class, 'stats']);
+         
+        // Address management
+        Route::apiResource('addresses', \App\Http\Controllers\Api\AddressController::class);
+        Route::post('/addresses/{address}/set-default', [\App\Http\Controllers\Api\AddressController::class, 'setDefault']);
+    });
+});
+
+// Auth routes (public - no authentication required, no merchant needed for login/register)
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/register', [AuthController::class, 'register']);
+
+// Payment routes - require merchant validation
+Route::middleware([\App\Http\Middleware\EnsureMerchantExists::class])->group(function () {
+    // Public payment routes
+    Route::get('/payment/gateways', [\App\Http\Controllers\Api\PaymentController::class, 'gateways']);
+
+    // Protected payment routes
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/payment/initiate', [\App\Http\Controllers\Api\PaymentController::class, 'initiate']);
+        Route::post('/payment/verify', [\App\Http\Controllers\Api\PaymentController::class, 'verify']);
+        Route::get('/payment/status/{transaction}', [\App\Http\Controllers\Api\PaymentController::class, 'status']);
+    });
 });
 
 // Admin API routes - use Sanctum for authentication
@@ -200,6 +216,15 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class
     });
     
     Route::post('/delivery-methods', function (\Illuminate\Http\Request $request) {
+        $featureGate = app(\App\Services\FeatureGateService::class);
+        if (!$featureGate->canCreateMoreDeliveryMethods()) {
+            $remaining = $featureGate->getRemainingDeliveryMethodSlots();
+            return response()->json([
+                'success' => false,
+                'message' => "شما به حداکثر تعداد روش‌های ارسال مجاز رسیده‌اید. ({$remaining} روش باقی مانده) لطفاً پلن خود را ارتقا دهید."
+            ], 403);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'fee' => 'required|integer|min:0',
@@ -364,6 +389,14 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class
     });
     
     Route::post('/campaigns', function (\Illuminate\Http\Request $request) {
+        $featureGate = app(\App\Services\FeatureGateService::class);
+        if (!$featureGate->canUseCampaigns()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'استفاده از کمپین‌های تخفیف در پلن شما موجود نیست. لطفاً پلن خود را ارتقا دهید.'
+            ], 403);
+        }
+
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -444,14 +477,259 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureUserIsAdmin::class
     Route::apiResource('payment-gateways', \App\Http\Controllers\Api\AdminPaymentGatewayController::class);
     Route::patch('/payment-gateways/{paymentGateway}/toggle', [\App\Http\Controllers\Api\AdminPaymentGatewayController::class, 'toggle']);
     Route::put('/payment-gateways/{paymentGateway}/config', [\App\Http\Controllers\Api\AdminPaymentGatewayController::class, 'updateConfig']);
+    
+    // Commissions
+    Route::get('/commissions', function () {
+        $commissions = \App\Models\Commission::with(['merchant', 'order'])
+            ->latest()
+            ->get();
+        return response()->json(['success' => true, 'data' => $commissions]);
+    });
+    
+    Route::get('/commissions/{id}', function ($id) {
+        $commission = \App\Models\Commission::with(['merchant', 'order'])->findOrFail($id);
+        return response()->json(['success' => true, 'data' => $commission]);
+    });
+    
+    Route::patch('/commissions/{id}/mark-paid', function ($id) {
+        $commission = \App\Models\Commission::findOrFail($id);
+        $commissionService = app(\App\Services\CommissionService::class);
+        $commission = $commissionService->markCommissionAsPaid($commission);
+        return response()->json([
+            'success' => true,
+            'message' => 'کمیسیون به عنوان پرداخت شده علامت‌گذاری شد',
+            'data' => $commission->load('merchant', 'order')
+        ]);
+    });
+    
+    Route::get('/commissions/summary', function () {
+        $commissionService = app(\App\Services\CommissionService::class);
+        $merchants = \App\Models\Merchant::all();
+        $summary = [];
+        
+        foreach ($merchants as $merchant) {
+            $summary[] = [
+                'merchant' => $merchant->name,
+                'merchant_id' => $merchant->id,
+                ...$commissionService->getCommissionsSummary($merchant)
+            ];
+        }
+        
+        return response()->json(['success' => true, 'data' => $summary]);
+    });
+    
+    // Subscriptions
+    Route::get('/subscriptions', function () {
+        $subscriptions = \App\Models\Subscription::with(['merchant.user', 'plan'])
+            ->latest()
+            ->get();
+        return response()->json(['success' => true, 'data' => $subscriptions]);
+    });
+    
+    Route::get('/subscriptions/{id}', function ($id) {
+        $subscription = \App\Models\Subscription::with(['merchant.user', 'plan', 'payments'])->findOrFail($id);
+        return response()->json(['success' => true, 'data' => $subscription]);
+    });
+    
+    Route::post('/subscriptions/{id}/renew', function ($id) {
+        $subscription = \App\Models\Subscription::findOrFail($id);
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $subscription = $subscriptionService->renewSubscription($subscription);
+        return response()->json([
+            'success' => true,
+            'message' => 'اشتراک با موفقیت تمدید شد',
+            'data' => $subscription->load('merchant', 'plan')
+        ]);
+    });
+    
+    Route::post('/subscriptions/{id}/cancel', function ($id) {
+        $subscription = \App\Models\Subscription::findOrFail($id);
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $subscription = $subscriptionService->cancelSubscription($subscription);
+        return response()->json([
+            'success' => true,
+            'message' => 'اشتراک با موفقیت لغو شد',
+            'data' => $subscription->load('merchant', 'plan')
+        ]);
+    });
+    
+    Route::patch('/subscriptions/{id}/status', function (\Illuminate\Http\Request $request, $id) {
+        $subscription = \App\Models\Subscription::findOrFail($id);
+        $validated = $request->validate([
+            'status' => 'required|in:active,trial,canceled,expired'
+        ]);
+        
+        $subscription->update(['status' => $validated['status']]);
+        $subscription->merchant->update(['subscription_status' => $validated['status']]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'وضعیت اشتراک تغییر کرد',
+            'data' => $subscription->fresh()->load('merchant', 'plan')
+        ]);
+    });
+    
+    // Merchants
+    Route::get('/merchants', function () {
+        $merchants = \App\Models\Merchant::with(['user', 'plan', 'theme', 'subscription'])
+            ->latest()
+            ->get();
+        return response()->json(['success' => true, 'data' => $merchants]);
+    });
+    
+    Route::get('/merchants/{id}', function ($id) {
+        $merchant = \App\Models\Merchant::with(['user', 'plan', 'theme', 'subscription'])->findOrFail($id);
+        return response()->json(['success' => true, 'data' => $merchant]);
+    });
+    
+    Route::patch('/merchants/{id}/status', function (\Illuminate\Http\Request $request, $id) {
+        $merchant = \App\Models\Merchant::findOrFail($id);
+        $validated = $request->validate([
+            'is_active' => 'required|boolean'
+        ]);
+        
+        $merchant->update(['is_active' => $validated['is_active']]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => $validated['is_active'] ? 'فروشگاه فعال شد' : 'فروشگاه غیرفعال شد',
+            'data' => $merchant->fresh()->load('user', 'plan', 'theme', 'subscription')
+        ]);
+    });
+    
+    Route::patch('/merchants/{id}/plan', function (\Illuminate\Http\Request $request, $id) {
+        $merchant = \App\Models\Merchant::findOrFail($id);
+        $validated = $request->validate([
+            'plan_id' => 'required|exists:plans,id'
+        ]);
+        
+        $plan = \App\Models\Plan::findOrFail($validated['plan_id']);
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        
+        $subscription = $subscriptionService->changePlan(
+            $merchant,
+            $plan,
+            $merchant->subscription->billing_cycle ?? 'monthly'
+        );
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'پلن فروشگاه تغییر کرد',
+            'data' => $merchant->fresh()->load('user', 'plan', 'theme', 'subscription')
+        ]);
+    });
 });
 
-// Public payment routes
-Route::get('/payment/gateways', [\App\Http\Controllers\Api\PaymentController::class, 'gateways']);
+// SaaS Routes (public)
+Route::get('/saas/plans', [\App\Http\Controllers\Api\SaasController::class, 'plans']);
+Route::get('/saas/themes', function () {
+    $themes = \App\Models\Theme::where('is_active', true)->orderBy('sort_order')->get();
+    return response()->json(['success' => true, 'data' => $themes]);
+});
+// Register route - session middleware added in bootstrap/app.php for all API routes
+Route::post('/saas/register', [\App\Http\Controllers\Api\SaasController::class, 'register']);
+Route::middleware('auth:sanctum')->post('/saas/subscribe', [\App\Http\Controllers\Api\SaasController::class, 'subscribe']);
 
-// Protected payment routes
+// Merchant Routes
+Route::get('/merchant/theme', [\App\Http\Controllers\Api\MerchantController::class, 'getTheme']);
+Route::get('/merchant/info', [\App\Http\Controllers\Api\MerchantController::class, 'info']);
+Route::get('/merchant/themes', [\App\Http\Controllers\Api\MerchantController::class, 'getAvailableThemes']);
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/payment/initiate', [\App\Http\Controllers\Api\PaymentController::class, 'initiate']);
-    Route::post('/payment/verify', [\App\Http\Controllers\Api\PaymentController::class, 'verify']);
-    Route::get('/payment/status/{transaction}', [\App\Http\Controllers\Api\PaymentController::class, 'status']);
+    Route::put('/merchant/theme', [\App\Http\Controllers\Api\MerchantController::class, 'updateTheme']);
+    Route::put('/merchant/settings', [\App\Http\Controllers\Api\MerchantController::class, 'updateSettings']);
+    
+    // Merchant Subscription Management
+    Route::get('/merchant/subscription', function () {
+        $user = auth()->user();
+        $merchant = \App\Models\Merchant::where('user_id', $user->id)->first();
+        
+        if (!$merchant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فروشگاهی یافت نشد'
+            ], 404);
+        }
+        
+        $subscription = $merchant->subscription;
+        if (!$subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اشتراکی یافت نشد'
+            ], 404);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'data' => $subscription->load('plan', 'payments')
+        ]);
+    });
+    
+    Route::post('/merchant/subscription/upgrade', function (\Illuminate\Http\Request $request) {
+        $user = auth()->user();
+        $merchant = \App\Models\Merchant::where('user_id', $user->id)->first();
+        
+        if (!$merchant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فروشگاهی یافت نشد'
+            ], 404);
+        }
+        
+        $validated = $request->validate([
+            'plan_id' => 'required|exists:plans,id',
+            'billing_cycle' => 'required|in:monthly,yearly'
+        ]);
+        
+        $plan = \App\Models\Plan::findOrFail($validated['plan_id']);
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        
+        $subscription = $subscriptionService->changePlan(
+            $merchant,
+            $plan,
+            $validated['billing_cycle']
+        );
+        
+        $price = $subscriptionService->calculatePrice($plan, $validated['billing_cycle']);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'پلن با موفقیت تغییر کرد',
+            'data' => [
+                'subscription' => $subscription->load('plan'),
+                'merchant' => $merchant->fresh()->load('plan', 'theme'),
+                'amount' => $price,
+                'payment_required' => $price > 0
+            ]
+        ]);
+    });
+    
+    Route::post('/merchant/subscription/cancel', function () {
+        $user = auth()->user();
+        $merchant = \App\Models\Merchant::where('user_id', $user->id)->first();
+        
+        if (!$merchant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فروشگاهی یافت نشد'
+            ], 404);
+        }
+        
+        $subscription = $merchant->subscription;
+        if (!$subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اشتراکی یافت نشد'
+            ], 404);
+        }
+        
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $subscription = $subscriptionService->cancelSubscription($subscription);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'اشتراک با موفقیت لغو شد',
+            'data' => $subscription->load('plan')
+        ]);
+    });
 });
+

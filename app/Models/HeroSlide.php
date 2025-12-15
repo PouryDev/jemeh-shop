@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\MerchantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class HeroSlide extends Model
@@ -11,6 +13,7 @@ class HeroSlide extends Model
     use HasFactory;
 
     protected $fillable = [
+        'merchant_id',
         'title',
         'subtitle',
         'description',
@@ -24,6 +27,19 @@ class HeroSlide extends Model
         'is_active',
         'sort_order',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new MerchantScope);
+    }
+
+    public function merchant(): BelongsTo
+    {
+        return $this->belongsTo(Merchant::class);
+    }
 
     protected $casts = [
         'is_active' => 'boolean',

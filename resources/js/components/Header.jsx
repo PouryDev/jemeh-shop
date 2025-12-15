@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import { useMerchant } from '../contexts/MerchantContext';
 import CheckoutAuthModal from './CheckoutAuthModal';
 import SearchDropdown from './SearchDropdown';
 
@@ -11,11 +12,18 @@ function Header() {
     const location = useLocation();
     const { user, logout, isAdmin } = useAuth();
     const { cartData } = useCart();
+    const { merchantData } = useMerchant();
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [authOpen, setAuthOpen] = useState(false);
 
     // Check if user is in account area
     const isInAccountArea = location.pathname.startsWith('/account');
+
+    // Get logo and title from merchant settings
+    const logoUrl = merchantData?.settings?.logo_path 
+        ? `/storage/${merchantData.settings.logo_path}` 
+        : '/images/logo.png';
+    const websiteTitle = merchantData?.settings?.website_title || merchantData?.name || 'جمه';
 
 
     const toggleMenu = () => {
@@ -29,8 +37,8 @@ function Header() {
                 <div className="flex justify-between items-center h-16">
                     {/* Logo */}
                     <Link to="/" className="flex items-center space-x-2 text-white hover:text-cherry-400 transition-colors">
-                        <img src="/images/logo.png" alt="Logo" className="h-8 w-8" />
-                        <span className="font-bold text-xl">جمه</span>
+                        <img src={logoUrl} alt="Logo" className="h-8 w-8" onError={(e) => { e.target.src = '/images/logo.png'; }} />
+                        <span className="font-bold text-xl">{websiteTitle}</span>
                     </Link>
 
                     {/* Desktop Navigation */}

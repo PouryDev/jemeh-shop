@@ -205,7 +205,10 @@ class CheckoutController extends Controller
             $receiptPath = $request->file('receipt')->store('receipts', 'public');
         }
 
+        $merchant = \App\Models\Merchant::current();
+        
         $order = Order::create([
+            'merchant_id' => $merchant?->id,
             'user_id' => $request->user() ? $request->user()->id : null,
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
@@ -222,6 +225,12 @@ class CheckoutController extends Controller
             'status' => 'pending',
             'receipt_path' => $receiptPath,
         ]);
+
+        // Calculate and record commission if applicable (Basic plan)
+        if ($merchant && $merchant->plan) {
+            $commissionService = new \App\Services\CommissionService();
+            $commissionService->calculateAndRecordCommission($order);
+        }
 
         foreach ($cart as $cartKey => $qty) {
             // Parse cart key to get product ID and variant info
@@ -298,7 +307,10 @@ class CheckoutController extends Controller
             $discountService->applyDiscountToOrder($order, $discountCode, $discountAmount);
         }
 
+        $merchant = \App\Models\Merchant::current();
+        
         $invoice = Invoice::create([
+            'merchant_id' => $merchant?->id,
             'order_id' => $order->id,
             'payment_gateway_id' => $data['payment_gateway_id'] ?? null,
             'invoice_number' => 'INV-'.Str::upper(Str::random(8)),

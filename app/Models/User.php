@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -77,6 +78,44 @@ class User extends Authenticatable
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Get the merchants that this user belongs to through merchant_users.
+     */
+    public function merchants(): BelongsToMany
+    {
+        return $this->belongsToMany(Merchant::class, 'merchant_users')
+            ->withPivot('role', 'is_admin')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the merchant users for this user.
+     */
+    public function merchantUsers(): HasMany
+    {
+        return $this->hasMany(MerchantUser::class);
+    }
+
+    /**
+     * Check if user is admin of a specific merchant.
+     * 
+     * If user.is_admin is true, they are admin in all merchants (super admin).
+     * Otherwise, check if merchant_users.is_admin is true for this specific merchant.
+     */
+    public function isAdminOf(Merchant $merchant): bool
+    {
+        // Super admin: if user is admin in users table, they are admin in all merchants
+        if ($this->is_admin) {
+            return true;
+        }
+
+        // Check if user is admin in this specific merchant
+        return $this->merchantUsers()
+            ->where('merchant_id', $merchant->id)
+            ->where('is_admin', true)
+            ->exists();
     }
 
 }

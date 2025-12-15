@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\MerchantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Carbon\Carbon;
@@ -13,6 +15,7 @@ class Campaign extends Model
     use HasFactory;
 
     protected $fillable = [
+        'merchant_id',
         'name',
         'description',
         'type',
@@ -25,6 +28,19 @@ class Campaign extends Model
         'banner_image',
         'badge_text',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new MerchantScope);
+    }
+
+    public function merchant(): BelongsTo
+    {
+        return $this->belongsTo(Merchant::class);
+    }
 
     protected $casts = [
         'starts_at' => 'datetime',

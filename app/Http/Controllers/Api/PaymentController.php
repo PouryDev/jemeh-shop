@@ -169,7 +169,10 @@ class PaymentController extends Controller
 
                 DB::transaction(function () use ($transaction, $invoice, $orderData) {
                     // Create Order immediately for card-to-card payment
+                    $merchant = \App\Models\Merchant::current();
+                    
                     $order = Order::create([
+                        'merchant_id' => $merchant?->id,
                         'user_id' => $orderData['user_id'],
                         'customer_name' => $orderData['customer_name'],
                         'customer_phone' => $orderData['customer_phone'],
@@ -186,6 +189,12 @@ class PaymentController extends Controller
                         'status' => 'pending', // Pending admin verification
                         'receipt_path' => $orderData['receipt_path'],
                     ]);
+
+                    // Calculate and record commission if applicable (Basic plan)
+                    if ($merchant) {
+                        $commissionService = new \App\Services\CommissionService();
+                        $commissionService->calculateAndRecordCommission($order);
+                    }
 
                     Log::info('[PaymentController][verify] Order created for card-to-card payment', [
                         'order_id' => $order->id,

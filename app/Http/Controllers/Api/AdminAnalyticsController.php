@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\FeatureGateService;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -17,11 +18,26 @@ use Carbon\Carbon;
 
 class AdminAnalyticsController extends Controller
 {
+    protected FeatureGateService $featureGate;
+
+    public function __construct(FeatureGateService $featureGate)
+    {
+        $this->featureGate = $featureGate;
+    }
+
     /**
      * Get overall analytics stats
      */
     public function index(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess === 'none') {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی به آمار و تحلیل در پلن شما موجود نیست. لطفاً پلن خود را ارتقا دهید.'
+            ], 403);
+        }
         $filters = $this->getFilters($request);
         $cacheKey = 'analytics:overview:' . md5(serialize($filters));
 
@@ -41,28 +57,38 @@ class AdminAnalyticsController extends Controller
 
             $totalOrders = $query->count();
             $totalRevenue = (clone $query)->sum('final_amount');
-            $totalItems = (clone $query)->withCount('items')->get()->sum('items_count');
-            $averageOrder = $totalOrders > 0 ? round($totalRevenue / $totalOrders) : 0;
-
-            // Orders by status
-            $ordersByStatus = Order::select('status', DB::raw('COUNT(*) as count'))
-                ->when($filters['start_date'], function ($q) use ($filters) {
-                    $q->where('created_at', '>=', $filters['start_date']);
-                })
-                ->when($filters['end_date'], function ($q) use ($filters) {
-                    $q->where('created_at', '<=', $filters['end_date']->endOfDay());
-                })
-                ->groupBy('status')
-                ->get()
-                ->pluck('count', 'status');
-
-            return [
+            
+            $result = [
                 'total_orders' => $totalOrders,
                 'total_revenue' => $totalRevenue,
-                'total_items' => $totalItems,
-                'average_order' => $averageOrder,
-                'orders_by_status' => $ordersByStatus,
             ];
+
+            // Professional and Enterprise plans get more data
+            if ($analyticsAccess === 'basic' || $analyticsAccess === 'full') {
+                $totalItems = (clone $query)->withCount('items')->get()->sum('items_count');
+                $averageOrder = $totalOrders > 0 ? round($totalRevenue / $totalOrders) : 0;
+                
+                $result['total_items'] = $totalItems;
+                $result['average_order'] = $averageOrder;
+            }
+
+            // Only Enterprise plan gets orders by status
+            if ($analyticsAccess === 'full') {
+                $ordersByStatus = Order::select('status', DB::raw('COUNT(*) as count'))
+                    ->when($filters['start_date'], function ($q) use ($filters) {
+                        $q->where('created_at', '>=', $filters['start_date']);
+                    })
+                    ->when($filters['end_date'], function ($q) use ($filters) {
+                        $q->where('created_at', '<=', $filters['end_date']->endOfDay());
+                    })
+                    ->groupBy('status')
+                    ->get()
+                    ->pluck('count', 'status');
+                
+                $result['orders_by_status'] = $ordersByStatus;
+            }
+
+            return $result;
         });
 
         return response()->json(['success' => true, 'data' => $data]);
@@ -73,6 +99,14 @@ class AdminAnalyticsController extends Controller
      */
     public function salesByDay(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess === 'none') {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی به آمار و تحلیل در پلن شما موجود نیست. لطفاً پلن خود را ارتقا دهید.'
+            ], 403);
+        }
         $filters = $this->getFilters($request);
         $cacheKey = 'analytics:sales-by-day:' . md5(serialize($filters));
 
@@ -109,10 +143,18 @@ class AdminAnalyticsController extends Controller
     }
 
     /**
-     * Get sales by hour
+     * Get sales by hour - Only for Enterprise plan
      */
     public function salesByHour(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess !== 'full') {
+            return response()->json([
+                'success' => false,
+                'message' => 'این آمار فقط در پلن سازمانی در دسترس است.'
+            ], 403);
+        }
         $filters = $this->getFilters($request);
         $cacheKey = 'analytics:sales-by-hour:' . md5(serialize($filters));
 
@@ -164,10 +206,18 @@ class AdminAnalyticsController extends Controller
     }
 
     /**
-     * Get top selling products
+     * Get top selling products - Only for Enterprise plan
      */
     public function topProducts(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess !== 'full') {
+            return response()->json([
+                'success' => false,
+                'message' => 'این آمار فقط در پلن سازمانی در دسترس است.'
+            ], 403);
+        }
         $filters = $this->getFilters($request);
         $limit = $request->input('limit', 10);
         $cacheKey = 'analytics:top-products:' . md5(serialize($filters) . $limit);
@@ -213,10 +263,18 @@ class AdminAnalyticsController extends Controller
     }
 
     /**
-     * Get top selling categories
+     * Get top selling categories - Only for Enterprise plan
      */
     public function topCategories(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess !== 'full') {
+            return response()->json([
+                'success' => false,
+                'message' => 'این آمار فقط در پلن سازمانی در دسترس است.'
+            ], 403);
+        }
         $filters = $this->getFilters($request);
         $limit = $request->input('limit', 10);
         $cacheKey = 'analytics:top-categories:' . md5(serialize($filters) . $limit);
@@ -265,10 +323,18 @@ class AdminAnalyticsController extends Controller
     }
 
     /**
-     * Get campaign statistics
+     * Get campaign statistics - Only for Enterprise plan
      */
     public function campaigns(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess !== 'full') {
+            return response()->json([
+                'success' => false,
+                'message' => 'این آمار فقط در پلن سازمانی در دسترس است.'
+            ], 403);
+        }
         $filters = $this->getFilters($request);
         $cacheKey = 'analytics:campaigns:' . md5(serialize($filters));
 
@@ -316,10 +382,18 @@ class AdminAnalyticsController extends Controller
     }
 
     /**
-     * Get hero slides statistics
+     * Get hero slides statistics - Only for Enterprise plan
      */
     public function heroSlides(Request $request)
     {
+        $analyticsAccess = $this->featureGate->hasAnalyticsAccess();
+        
+        if ($analyticsAccess !== 'full') {
+            return response()->json([
+                'success' => false,
+                'message' => 'این آمار فقط در پلن سازمانی در دسترس است.'
+            ], 403);
+        }
         $cacheKey = 'analytics:hero-slides';
 
         $data = Cache::remember($cacheKey, 3600, function () {

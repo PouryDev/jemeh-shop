@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\MerchantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ class Transaction extends Model
     use HasFactory;
 
     protected $fillable = [
+        'merchant_id',
         'invoice_id',
         'gateway_id',
         'gateway_transaction_id',
@@ -23,6 +25,19 @@ class Transaction extends Model
         'verified_at',
         'verified_by',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new MerchantScope);
+    }
+
+    public function merchant(): BelongsTo
+    {
+        return $this->belongsTo(Merchant::class);
+    }
 
     protected $casts = [
         'callback_data' => 'array',

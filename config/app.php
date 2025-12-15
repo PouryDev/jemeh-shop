@@ -55,6 +55,18 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+     |--------------------------------------------------------------------------
+     | Main Domain for SaaS
+     |--------------------------------------------------------------------------
+     |
+     | This is the main domain for the SaaS platform. Subdomains will be
+     | resolved using this domain.
+     |
+     */
+
+    'main_domain' => env('APP_MAIN_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

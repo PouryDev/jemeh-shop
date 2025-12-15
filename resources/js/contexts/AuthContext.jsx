@@ -7,24 +7,24 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const loadUser = async () => {
+        try {
+            const data = await getCurrentUser();
+            if (data.success) {
+                setUser(data.data);
+            } else {
+                setUser(null);
+            }
+        } catch (error) {
+            console.error('Failed to load user:', error);
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Load user on app start
     useEffect(() => {
-        const loadUser = async () => {
-            try {
-                const data = await getCurrentUser();
-                if (data.success) {
-                    setUser(data.data);
-                } else {
-                    setUser(null);
-                }
-            } catch (error) {
-                console.error('Failed to load user:', error);
-                setUser(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         // Add a small delay to ensure the app is fully loaded
         const timer = setTimeout(loadUser, 100);
         return () => clearTimeout(timer);
@@ -37,9 +37,21 @@ export function AuthProvider({ children }) {
             setLoading(false);
         };
 
+        // Listen for merchant changes to refresh user (to update is_admin status)
+        const handleMerchantChange = () => {
+            if (user) {
+                loadUser();
+            }
+        };
+
         window.addEventListener('auth:logout', handleLogout);
-        return () => window.removeEventListener('auth:logout', handleLogout);
-    }, []);
+        window.addEventListener('merchant:changed', handleMerchantChange);
+        
+        return () => {
+            window.removeEventListener('auth:logout', handleLogout);
+            window.removeEventListener('merchant:changed', handleMerchantChange);
+        };
+    }, [user]);
 
     const login = async (userData) => {
         try {

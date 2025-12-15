@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Merchant;
 use App\Models\PaymentGateway;
 use Illuminate\Http\Request;
 
@@ -37,9 +38,26 @@ class AdminPaymentGatewayController extends Controller
      */
     public function store(Request $request)
     {
+        $merchant = Merchant::current();
+        $merchantId = $merchant?->id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255|unique:payment_gateways,type',
+            'type' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($merchantId) {
+                    $exists = PaymentGateway::where('type', $value)
+                        ->when($merchantId, function ($query) use ($merchantId) {
+                            $query->where('merchant_id', $merchantId);
+                        })
+                        ->exists();
+                    if ($exists) {
+                        $fail('این نوع درگاه پرداخت قبلاً استفاده شده است.');
+                    }
+                },
+            ],
             'display_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'config' => 'nullable|array',
@@ -47,6 +65,7 @@ class AdminPaymentGatewayController extends Controller
             'sort_order' => 'integer|min:0',
         ]);
 
+        $validated['merchant_id'] = $merchantId;
         $gateway = PaymentGateway::create($validated);
 
         return response()->json([
@@ -61,9 +80,28 @@ class AdminPaymentGatewayController extends Controller
      */
     public function update(Request $request, PaymentGateway $paymentGateway)
     {
+        $merchant = Merchant::current();
+        $merchantId = $merchant?->id;
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'type' => 'sometimes|required|string|max:255|unique:payment_gateways,type,' . $paymentGateway->id,
+            'type' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($merchantId, $paymentGateway) {
+                    $exists = PaymentGateway::where('type', $value)
+                        ->where('id', '!=', $paymentGateway->id)
+                        ->when($merchantId, function ($query) use ($merchantId) {
+                            $query->where('merchant_id', $merchantId);
+                        })
+                        ->exists();
+                    if ($exists) {
+                        $fail('این نوع درگاه پرداخت قبلاً استفاده شده است.');
+                    }
+                },
+            ],
             'display_name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'config' => 'nullable|array',

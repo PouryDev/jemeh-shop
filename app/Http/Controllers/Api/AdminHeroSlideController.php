@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ChecksPlanLimits;
+use App\Models\Merchant;
 use App\Models\HeroSlide;
 use App\Models\Product;
 use App\Models\Category;
@@ -12,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminHeroSlideController extends Controller
 {
+    use ChecksPlanLimits;
     public function index()
     {
         $slides = HeroSlide::with('linkable')
@@ -36,6 +39,12 @@ class AdminHeroSlideController extends Controller
 
     public function store(Request $request)
     {
+        // Check slide limit
+        $this->checkSlideLimit();
+
+        $merchant = Merchant::current();
+        $merchantId = $merchant?->id;
+
         // Convert empty strings to null for proper validation
         $request->merge([
             'linkable_id' => $request->input('linkable_id') === '' || $request->input('linkable_id') === null ? null : $request->input('linkable_id'),
@@ -78,6 +87,15 @@ class AdminHeroSlideController extends Controller
 
             if ($modelClass) {
                 $linkable = $modelClass::findOrFail($data['linkable_id']);
+                
+                // Verify linkable belongs to the same merchant
+                if ($merchantId && $linkable->merchant_id !== $merchantId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'این ' . ($data['link_type'] === 'product' ? 'محصول' : ($data['link_type'] === 'category' ? 'دسته‌بندی' : 'کمپین')) . ' متعلق به فروشگاه شما نیست.'
+                    ], 403);
+                }
+                
                 $data['linkable_type'] = get_class($linkable);
                 $data['linkable_id'] = $linkable->id;
             }
@@ -90,6 +108,7 @@ class AdminHeroSlideController extends Controller
         $data['click_count'] = 0;
         $data['is_active'] = $request->boolean('is_active', true);
         $data['sort_order'] = $data['sort_order'] ?? HeroSlide::max('sort_order') + 1;
+        $data['merchant_id'] = $merchantId;
 
         $slide = HeroSlide::create($data);
 
@@ -103,6 +122,8 @@ class AdminHeroSlideController extends Controller
     public function update(Request $request, $id)
     {
         $slide = HeroSlide::findOrFail($id);
+        $merchant = Merchant::current();
+        $merchantId = $merchant?->id;
 
         // Convert empty strings to null for proper validation
         $linkableId = $request->input('linkable_id');
@@ -157,6 +178,15 @@ class AdminHeroSlideController extends Controller
 
             if ($modelClass) {
                 $linkable = $modelClass::findOrFail($data['linkable_id']);
+                
+                // Verify linkable belongs to the same merchant
+                if ($merchantId && $linkable->merchant_id !== $merchantId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'این ' . ($data['link_type'] === 'product' ? 'محصول' : ($data['link_type'] === 'category' ? 'دسته‌بندی' : 'کمپین')) . ' متعلق به فروشگاه شما نیست.'
+                    ], 403);
+                }
+                
                 $data['linkable_type'] = get_class($linkable);
                 $data['linkable_id'] = $linkable->id;
             }

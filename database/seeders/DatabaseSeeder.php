@@ -49,13 +49,20 @@ class DatabaseSeeder extends Seeder
         // 8. Create Campaigns
         $this->createCampaigns($products, $categories);
 
-        // 9. Create Delivery Methods
+        // 9. Create Plans and Themes
+        $this->command->info('📦 Creating plans...');
+        $this->call(PlanSeeder::class);
+        
+        $this->command->info('🎨 Creating themes...');
+        $this->call(ThemeSeeder::class);
+
+        // 10. Create Delivery Methods
         $this->call(DeliveryMethodSeeder::class);
 
-        // 10. Create Sample Orders
+        // 11. Create Sample Orders
         $this->createSampleOrders();
 
-        // 11. Run Production Seeder (optional - comment out if not needed)
+        // 12. Run Production Seeder (optional - comment out if not needed)
         $this->command->info('🏭 Running Production Seeder...');
         $this->call(ProductionSeeder::class);
 
@@ -104,7 +111,10 @@ class DatabaseSeeder extends Seeder
 
         $createdCategories = [];
         foreach ($categories as $categoryData) {
-            $category = Category::create($categoryData);
+            $category = Category::updateOrCreate(
+                ['name' => $categoryData['name']],
+                $categoryData
+            );
             $createdCategories[] = $category;
         }
 

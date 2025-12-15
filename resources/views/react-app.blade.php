@@ -6,7 +6,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="enamad" content="64930557" />
 
-    <title>64930557</title>
+    @php
+        $merchant = app()->bound('merchant') ? app('merchant') : null;
+        $pageTitle = $merchant?->settings['website_title'] ?? $merchant?->name ?? '64930557';
+    @endphp
+    <title>{{ $pageTitle }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -15,6 +19,15 @@
     <!-- Bootstrap User Data -->
     <script>
         window.__USER__ = @json(auth()->user());
+        @php
+            $merchantId = request()->query('merchant_id');
+            if (!$merchantId && app()->bound('merchant')) {
+                $merchantId = app('merchant')?->id;
+            }
+            $merchantData = app()->bound('merchant') ? app('merchant') : null;
+        @endphp
+        window.__MERCHANT_ID__ = @json($merchantId);
+        window.__MERCHANT__ = @json($merchantData);
     </script>
 
     <!-- Unregister Service Worker in development -->

@@ -1,7 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useMerchant } from '../contexts/MerchantContext';
 
 function Footer() {
+    const { merchantData } = useMerchant();
+
+    // Get logo and title from merchant settings
+    const logoUrl = merchantData?.settings?.logo_path 
+        ? `/storage/${merchantData.settings.logo_path}` 
+        : '/images/logo.png';
+    const websiteTitle = merchantData?.settings?.website_title || merchantData?.name || 'جمه';
+
     return (
         <footer className="bg-black/50 backdrop-blur-md border-t border-white/10 mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -9,8 +18,8 @@ function Footer() {
                     {/* Company Info */}
                     <div className="col-span-1 md:col-span-2">
                         <div className="flex items-center space-x-2 mb-4">
-                            <img src="/images/logo.png" alt="Logo" className="h-8 w-8"/>
-                            <span className="font-bold text-xl text-white">جمه</span>
+                            <img src={logoUrl} alt="Logo" className="h-8 w-8" onError={(e) => { e.target.src = '/images/logo.png'; }} />
+                            <span className="font-bold text-xl text-white">{websiteTitle}</span>
                             {/* E-Namad logo */}
                             <a referrerPolicy="origin" target="_blank"
                                href="https://trustseal.enamad.ir/?id=674581&Code=ET4La7gkVYrzYQ0tyceMQvKvcRCjJd3G"><img
@@ -92,7 +101,7 @@ function Footer() {
 
                 <div className="border-t border-white/10 mt-8 pt-8 text-center">
                     <p className="text-gray-400">
-                        © 2024 جمه. تمامی حقوق محفوظ است.
+                        © 2024 {websiteTitle}. تمامی حقوق محفوظ است.
                     </p>
                 </div>
             </div>

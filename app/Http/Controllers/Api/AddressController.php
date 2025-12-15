@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Merchant;
 use App\Models\Address;
 use Illuminate\Http\Request;
 
@@ -36,7 +37,10 @@ class AddressController extends Controller
             $request->user()->addresses()->update(['is_default' => false]);
         }
 
+        $merchant = Merchant::current();
+
         $address = $request->user()->addresses()->create([
+            'merchant_id' => $merchant?->id,
             'title' => $request->title,
             'address' => $request->address,
             'postal_code' => $request->postal_code,

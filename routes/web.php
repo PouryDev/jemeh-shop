@@ -31,7 +31,7 @@ Route::get('/test-session', function () {
 
 // React app routes
 Route::get('/checkout', function () {
-    return view('react-app');
+    return view(view: 'react-app');
 })->name('checkout.index');
 Route::get('/account', function () {
     return view('react-app');

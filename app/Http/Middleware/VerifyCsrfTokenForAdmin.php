@@ -15,8 +15,13 @@ class VerifyCsrfTokenForAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Skip CSRF verification for admin API routes
-        if ($request->is('api/admin/*')) {
+        // Skip CSRF verification for all API routes
+        if ($request->is('api/*')) {
+            return $next($request);
+        }
+
+        // Skip CSRF verification for admin API routes and SaaS registration route (redundant but safe)
+        if ($request->is('api/admin/*') || $request->is('api/saas/register')) {
             return $next($request);
         }
 

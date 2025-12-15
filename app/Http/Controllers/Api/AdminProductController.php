@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ChecksPlanLimits;
+use App\Models\Merchant;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Color;
@@ -12,6 +14,7 @@ use Illuminate\Support\Str;
 
 class AdminProductController extends Controller
 {
+    use ChecksPlanLimits;
     public function index()
     {
         $products = Product::with(['images', 'variants.color', 'variants.size', 'category'])
@@ -37,6 +40,14 @@ class AdminProductController extends Controller
 
     public function store(Request $request)
     {
+        // Check product limit
+        $this->checkProductLimit();
+
+        // Check product variants feature if variants are being used
+        if ($request->boolean('has_variants') || $request->has('variants')) {
+            $this->checkProductVariantsFeature();
+        }
+
         $data = $request->validate([
             'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
@@ -66,6 +77,9 @@ class AdminProductController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $data['price'] = (float) $data['price'];
         $data['stock'] = (int) $data['stock'];
+        
+        // Set merchant_id for multi-merchant support
+        $data['merchant_id'] = Merchant::current()?->id;
         
         $product = Product::create($data);
 
